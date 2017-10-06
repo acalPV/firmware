@@ -41,7 +41,7 @@ typedef struct prop {
 	prop_type_t type;
 	char path[MAX_PROP_LEN];
 	char symlink_target[MAX_PROP_LEN];
-	int (*handler)(const char* data, char* ret);
+	int (*handler)(const char* data, char* ret, size_t ret_len);
 	perm_t permissions;
 	char def_val[MAX_PROP_LEN];	// default value
 	int wd;		// inotify watch descriptor

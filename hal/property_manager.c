@@ -294,7 +294,7 @@ void check_property_inotifies(void) {
 			strcpy(prop_ret, prop_data);
 
 			PRINT( DEBUG,"Inotify handler [Prop: %s Data: %s]\n", prop -> path, prop_data);
-			prop -> handler(prop_data, prop_ret);
+			prop -> handler(prop_data, prop_ret, sizeof(prop_ret));
 			if (prop->permissions == RO) {
 				memset(prop_ret, 0, sizeof(prop_ret));
 				sprintf(prop_ret, "%s", prop->def_val);
