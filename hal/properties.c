@@ -228,10 +228,11 @@ static int hdlr_tx_a_rf_dac_nco (const char* data, char* ret, size_t ret_len) {
 }
 
 static int hdlr_tx_a_rf_dac_temp (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -c a -t\r");
+	snprintf(buf, sizeof(buf), "board -c a -t\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
@@ -242,7 +243,7 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 
 	// if freq = 0, mute PLL
 	if ( freq == 0 ) {
-		strcpy(buf, "rf -c a -z\r");
+		snprintf(buf, sizeof(buf), "rf -c a -z\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		return RETURN_SUCCESS;
@@ -250,7 +251,7 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 
         // if freq out of bounds, kill channel
         if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
-		strcpy(buf, "board -c a -k\r");
+		snprintf(buf, sizeof(buf), "board -c a -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		// Turn OFF TXA on HPS
@@ -276,7 +277,7 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret, size_t ret_len) {
         long double outfreq = 0;
 	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c a \r");
+	snprintf(buf, sizeof(buf), "rf -c a \r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
@@ -290,31 +291,21 @@ static int hdlr_tx_a_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 }
 
 static int hdlr_tx_a_rf_freq_band (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "rf -c a -b ");
-	strcat(buf, data);
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "rf -c a -b %i \r", data);
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_a_rf_freq_i_bias (const char* data, char* ret, size_t ret_len) {
    sscanf(data, "%i", &(i_bias[0]));
-   strcpy(buf, "rf -c a -i ");
-   snprintf(buf, sizeof(buf), "%s%i", "rf -c a -i ", i_bias[0]);
-   strcat(buf, " -q ");
-   snprintf(buf, sizeof(buf), "%s%i", "rf -c a -q ", q_bias[0]);
-   strcat(buf, " -m\r");
+   snprintf(buf, sizeof(buf), "rf -c a -i %i -q %i -m\r", i_bias[0], q_bias[0]);
    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_a_rf_freq_q_bias (const char* data, char* ret, size_t ret_len) {
    sscanf(data, "%i", &(q_bias[0]));
-   strcpy(buf, "rf -c a -i ");
-   snprintf(buf, sizeof(buf), "%s%i", "rf -c a -i ", i_bias[0]);
-   strcat(buf, " -q ");
-   snprintf(buf, sizeof(buf), "%s%i", "rf -c a -q ", q_bias[0]);
-   strcat(buf, " -m\r");
+   snprintf(buf, sizeof(buf), "rf -c a -i %i -q %i -m\r", i_bias[0], q_bias[0]);
    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
@@ -329,9 +320,8 @@ static int hdlr_tx_a_rf_gain_val (const char* data, char* ret, size_t ret_len) {
 	if (gain > 127)		gain = 127;
 	else if (gain < 0) 	gain = 0;
 
-	strcpy(buf, "rf -c a -a ");
-	snprintf(buf, sizeof(buf), "%s%i", "rf -c a -a ", 127 - gain);
-	strcat(buf, "\r");
+	//strcpy(buf, "rf -c a -a ");
+	snprintf(buf, sizeof(buf), "rf -c a -a %i \r", 127 - gain);
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
@@ -341,13 +331,13 @@ static int hdlr_tx_a_rf_board_dump (const char* data, char* ret, size_t ret_len)
 	// send the uart commands and read back the output and write to file
 
 	// DAC
-	strcpy(buf, "dump -c a -d\r");
+	snprintf(buf, sizeof(buf), "dump -c a -d\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
 	PRINT(DUMP, "[Board: tx_a Chip: DAC] %s\n", uart_ret_buf);
 
 	// GPIOX
-	strcpy(buf, "dump -c a -g\r");
+	snprintf(buf, sizeof(buf), "dump -c a -g\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
 	PRINT(DUMP, "[Board: tx_a Chip: GPIOX] %s\n", uart_ret_buf);
@@ -361,45 +351,46 @@ static int hdlr_tx_a_rf_board_test (const char* data, char* ret, size_t ret_len)
 }
 
 static int hdlr_tx_a_rf_board_temp (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -c a -t\r");
+	snprintf(buf, sizeof(buf), "board -c a -t\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	strncpy(ret, (char*)uart_ret_buf, ret_len);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_a_status_rfld (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -c a -l\r");
+	snprintf(buf, sizeof(buf), "status -c a -l\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	strncpy(ret, (char*)uart_ret_buf, ret_len);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_a_status_dacld(const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -c a -p\r");
+	strncpy(buf, "status -c a -p\r", sizeof(buf) - strlen(buf));
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	strncpy(ret, (char*)uart_ret_buf, ret_len);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_a_status_dacctr(const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -c a -e\r");
+	strncpy(buf, "status -c a -e\r", sizeof(buf) - strlen(buf));
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	strncpy(ret, (char*)uart_ret_buf, ret_len);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_a_rf_board_led (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -l\r");
-	strcat(buf, data);
-	strcat(buf, "\r");
+	//strncpy(buf, "board -l\r", sizeof(buf) - strlen(buf));
+	//strcat(buf, data);
+	//strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "board -l\r %i \r", data);
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
@@ -495,46 +486,51 @@ static int hdlr_tx_a_about_id (const char* data, char* ret, size_t ret_len) {
 }
 
 static int hdlr_tx_about_serial (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -s\r");
+	snprintf(buf, sizeof(buf), "status -s\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf, ret_len);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_about_mcudevid (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -d\r");
+	snprintf(buf, sizeof(buf), "status -d\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf, ret_len);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_about_mcurev (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -v\r");
+	snprintf(buf, sizeof(buf), "status -v\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf, ret_len);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_about_mcufuses (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -f\r");
+	snprintf(buf, sizeof(buf), "status -f\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf, ret_len);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_about_fw_ver (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -v\r");
+	snprintf(buf, sizeof(buf), "board -v\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf, ret_len);
 
 	return RETURN_SUCCESS;
 }
@@ -600,7 +596,7 @@ static int hdlr_tx_a_pwr (const char* data, char* ret, size_t ret_len) {
 		tx_power[0] = PWR_ON;
 
       // board commands
-		strcpy(buf, "board -c a -d\r");
+		snprintf(buf, sizeof(buf), "board -c a -d\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
       usleep(200000);
 
@@ -634,7 +630,7 @@ static int hdlr_tx_a_pwr (const char* data, char* ret, size_t ret_len) {
 	// power off
 	} else {
 		// kill the channel
-		strcpy(buf, "board -c a -k\r");
+		snprintf(buf, sizeof(buf), "board -c a -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		// disable DSP cores
@@ -668,7 +664,7 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 
 	// if freq = 0, mute PLL
 	if ( freq == 0 ) {
-		strcpy(buf, "rf -c a -z\r");
+		snprintf(buf, sizeof(buf), "rf -c a -z\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		return RETURN_SUCCESS;
@@ -676,7 +672,7 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 
         // if freq out of bounds, kill channel
         if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
-		strcpy(buf, "board -c a -k\r");
+		snprintf(buf, sizeof(buf), "board -c a -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		// Turn OFF RXA on HPS
@@ -703,7 +699,7 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret, size_t ret_len) {
         long double outfreq = 0;
 	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c a \r");
+	snprintf(buf, sizeof(buf), "rf -c a \r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
@@ -717,17 +713,13 @@ static int hdlr_rx_a_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 }
 
 static int hdlr_rx_a_rf_freq_lna (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "rf -c a -l ");
-	strcat(buf, data);
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "rf -c a -l %i\r", data);
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_a_rf_freq_band (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "rf -c a -b ");
-	strcat(buf, data);
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "rf -c a -b %i\r", data);
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
@@ -742,9 +734,9 @@ static int hdlr_rx_a_rf_gain_val (const char* data, char* ret, size_t ret_len) {
 	if (gain % 2) gain++;		// Odd Number
 
 	// 0 -> 126 gain
-	strcpy(buf, "vga -c a -g ");
-	snprintf(buf, sizeof(buf), "%s%i", "vga -c a -g ", gain >> 1);
-	strcat(buf, "\r");
+	//strcpy(buf, "vga -c a -g ");
+	snprintf(buf, sizeof(buf), "vga -c a -g %i\r", gain >> 1);
+	//strcat(buf, "\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
@@ -757,9 +749,7 @@ static int hdlr_rx_a_rf_atten_val(const char* data, char* ret, size_t ret_len) {
 	if (atten > 127)		atten = 127;
 	else if (atten < 0) 	atten = 0;
 
-	strcpy(buf, "rf -c a -a ");
-	snprintf(buf, sizeof(buf), "%s%i", "rf -c a -a ",atten);
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "rf -c a -a %i\r",atten);
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
@@ -769,19 +759,19 @@ static int hdlr_rx_a_rf_board_dump (const char* data, char* ret, size_t ret_len)
 	// send the uart commands and read back the output and write to file
 
 	// ADC
-	strcpy(buf, "dump -c a -a\r");
+	snprintf(buf, sizeof(buf), "dump -c a -a\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_a Chip: ADC] %s\n", uart_ret_buf);
 
 	// GPIOX
-	strcpy(buf, "dump -c a -g\r");
+	snprintf(buf, sizeof(buf), "dump -c a -g\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_a Chip: GPIOX] %s\n", uart_ret_buf);
 
 	// ADC Driver
-	strcpy(buf, "dump -c a -v\r");
+	snprintf(buf, sizeof(buf), "dump -c a -v\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_a Chip: ADC Driver] %s\n", uart_ret_buf);
@@ -795,36 +785,40 @@ static int hdlr_rx_a_rf_board_test (const char* data, char* ret, size_t ret_len)
 }
 
 static int hdlr_rx_a_rf_board_temp (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -c a -t\r");
+	snprintf(buf, sizeof(buf), "board -c a -t\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_a_status_rfld (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -c a -l\r");
+	snprintf(buf, sizeof(buf), "status -c a -l\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_a_status_adcalarm (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -c a -a\r");
+	snprintf(buf, sizeof(buf), "status -c a -a\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_a_rf_board_led (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -l\r");
-	strcat(buf, data);
-	strcat(buf, "\r");
+	//strncpy(buf, "board -l\r", sizeof(buf) - strlen(buf));
+	//strcat(buf, data);
+	//strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "board -l\r %i \r", data);
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
@@ -942,46 +936,51 @@ static int hdlr_rx_a_about_id (const char* data, char* ret, size_t ret_len) {
 }
 
 static int hdlr_rx_about_serial (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -s\r");
+	snprintf(buf, sizeof(buf), "status -s\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_about_mcudevid (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -d\r");
+	snprintf(buf, sizeof(buf), "status -d\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_about_mcurev (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -v\r");
+	snprintf(buf, sizeof(buf), "status -v\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_about_mcufuses (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -f\r");
+	snprintf(buf, sizeof(buf), "status -f\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_about_fw_ver (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -v\r");
+	snprintf(buf, sizeof(buf), "board -v\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, sizeof(buf) - strlen(buf));
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
@@ -1083,7 +1082,7 @@ static int hdlr_rx_a_pwr (const char* data, char* ret, size_t ret_len) {
 		rx_power[0] = PWR_ON;
 
 		// board command
-		strcpy(buf, "board -c a -d\r");
+		snprintf(buf, sizeof(buf), "board -c a -d\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 		usleep(200000);
 
@@ -1120,7 +1119,7 @@ static int hdlr_rx_a_pwr (const char* data, char* ret, size_t ret_len) {
 		rx_stream[0] = STREAM_OFF;
 
 		// kill the channel
-		strcpy(buf, "board -c a -k\r");
+		snprintf(buf, sizeof(buf), "board -c a -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		// disable DSP core
@@ -1208,24 +1207,21 @@ static int hdlr_tx_b_rf_dac_nco (const char* data, char* ret, size_t ret_len) {
 	uint64_t nco_steps = (uint64_t)round(freq * DAC_NCO_CONST);
 	snprintf(ret, ret_len, "%lf", (double)nco_steps / DAC_NCO_CONST);
 
-	strcpy(buf, "dac -c b -e 1 -n ");
-	snprintf(buf, sizeof(buf), "%s%" PRIu32 "", "dac -c b -e 1 -n ", (uint32_t)(nco_steps >> 32));
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "dac -c b -e 1 -n %" PRIu32 "\r", (uint32_t)(nco_steps >> 32));
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
-	strcpy(buf, "dac -o ");
-	snprintf(buf, sizeof(buf), "%s%" PRIu32 "", "dac -o ", (uint32_t)nco_steps);
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "dac -o %" PRIu32 "\r", (uint32_t)nco_steps);
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_b_rf_dac_temp (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -c b -t\r");
+	snprintf(buf, sizeof(buf), "board -c b -t\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
@@ -1236,7 +1232,7 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 
 	// if freq = 0, mute PLL
 	if ( freq == 0 ) {
-		strcpy(buf, "rf -c b -z\r");
+		snprintf(buf, sizeof(buf), "rf -c b -z\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		return RETURN_SUCCESS;
@@ -1244,7 +1240,7 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 
         // if freq out of bounds, kill channel
         if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
-		strcpy(buf, "board -c b -k\r");
+		snprintf(buf, sizeof(buf), "board -c b -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		// Turn OFF TXB on HPS
@@ -1270,7 +1266,7 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret, size_t ret_len) {
         long double outfreq = 0;
 	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c b \r");
+	snprintf(buf, sizeof(buf), "rf -c b \r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
@@ -1284,31 +1280,21 @@ static int hdlr_tx_b_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 }
 
 static int hdlr_tx_b_rf_freq_band (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "rf -c b -b ");
-	strcat(buf, data);
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "rf -c b -b %i\r", data);
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_b_rf_freq_i_bias (const char* data, char* ret, size_t ret_len) {
    sscanf(data, "%i", &(i_bias[1]));
-   strcpy(buf, "rf -c b -i ");
-   snprintf(buf, sizeof(buf), "%i", i_bias[1]);
-   strcat(buf, " -q ");
-   snprintf(buf, sizeof(buf), "%i", q_bias[1]);
-   strcat(buf, " -m\r");
+   snprintf(buf, sizeof(buf), "rf -c b -i %i -q %i -m\r", i_bias[1], q_bias[1]);
    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_b_rf_freq_q_bias (const char* data, char* ret, size_t ret_len) {
    sscanf(data, "%i", &(q_bias[1]));
-   strcpy(buf, "rf -c b -i ");
-   snprintf(buf, sizeof(buf), "%i", i_bias[1]);
-   strcat(buf, " -q ");
-   snprintf(buf, sizeof(buf), "%i", q_bias[1]);
-   strcat(buf, " -m\r");
+   snprintf(buf, sizeof(buf), "rf -c b -i %i -q %i -m\r", i_bias[1], q_bias[1]);
    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
@@ -1323,9 +1309,7 @@ static int hdlr_tx_b_rf_gain_val (const char* data, char* ret, size_t ret_len) {
 	if (gain > 127)		gain = 127;
 	else if (gain < 0) 	gain = 0;
 
-	strcpy(buf, "rf -c b -a ");
-	snprintf(buf, sizeof(buf), "%i", 127 - gain);
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "rf -c b -a %i \r", 127 - gain);
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
@@ -1335,13 +1319,13 @@ static int hdlr_tx_b_rf_board_dump (const char* data, char* ret, size_t ret_len)
 	// send the uart commands and read back the output and write to file
 
 	// DAC
-	strcpy(buf, "dump -c b -d\r");
+	snprintf(buf, sizeof(buf), "dump -c b -d\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
 	PRINT(DUMP, "[Board: tx_b Chip: DAC] %s\n", uart_ret_buf);
 
 	// GPIOX
-	strcpy(buf, "dump -c b -g\r");
+	snprintf(buf, sizeof(buf), "dump -c b -g\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
 	PRINT(DUMP, "[Board: tx_b Chip: GPIOX] %s\n", uart_ret_buf);
@@ -1355,46 +1339,52 @@ static int hdlr_tx_b_rf_board_test (const char* data, char* ret, size_t ret_len)
 }
 
 static int hdlr_tx_b_rf_board_temp (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -c b -t\r");
+	snprintf(buf, sizeof(buf), "board -c b -t\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 
 static int hdlr_tx_b_status_rfld (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -c b -l\r");
+	snprintf(buf, sizeof(buf), "status -c b -l\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_b_status_dacld(const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -c b -p\r");
+	snprintf(buf, sizeof(buf), "status -c b -p\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_b_status_dacctr(const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -c b -e\r");
+	snprintf(buf, sizeof(buf), "status -c b -e\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
+
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_b_rf_board_led (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -l\r");
-	strcat(buf, data);
-	strcat(buf, "\r");
+	//strncpy(buf, "board -l\r", sizeof(buf) - strlen(buf));
+	//strcat(buf, data);
+	//strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "board -l\r %i \r", data);
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
@@ -1550,7 +1540,7 @@ static int hdlr_tx_b_pwr (const char* data, char* ret, size_t ret_len) {
 		tx_power[1] = PWR_ON;
 
       // board commands
-		strcpy(buf, "board -c b -d\r");
+		snprintf(buf, sizeof(buf), "board -c b -d\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 		usleep(200000);
 
@@ -1584,7 +1574,7 @@ static int hdlr_tx_b_pwr (const char* data, char* ret, size_t ret_len) {
 	// power off
 	} else {
 		// kill the channel
-		strcpy(buf, "board -c b -k\r");
+		snprintf(buf, sizeof(buf), "board -c b -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		// disable the DSP cores
@@ -1607,7 +1597,7 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 
 	// if freq = 0, mute PLL
 	if ( freq == 0 ) {
-		strcpy(buf, "rf -c b -z\r");
+		snprintf(buf, sizeof(buf), "rf -c b -z\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		return RETURN_SUCCESS;
@@ -1615,7 +1605,7 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 
         // if freq out of bounds, kill channel
         if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
-		strcpy(buf, "board -c b -k\r");
+		snprintf(buf, sizeof(buf), "board -c b -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		// Turn OFF RXB on HPS
@@ -1642,7 +1632,7 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret, size_t ret_len) {
         long double outfreq = 0;
 	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c b \r");
+	snprintf(buf, sizeof(buf), "rf -c b \r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
@@ -1656,17 +1646,13 @@ static int hdlr_rx_b_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 }
 
 static int hdlr_rx_b_rf_freq_lna (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "rf -c b -l ");
-	strcat(buf, data);
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "rf -c b -l %i\r", data);
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_b_rf_freq_band (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "rf -c b -b ");
-	strcat(buf, data);
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "rf -c b -b %i\r", data);
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
@@ -1681,9 +1667,7 @@ static int hdlr_rx_b_rf_gain_val (const char* data, char* ret, size_t ret_len) {
 	if (gain % 2) gain++;		// Odd Number
 
 	// 0 -> 126 gain
-	strcpy(buf, "vga -c b -g ");
-	snprintf(buf, sizeof(buf), "%i", gain >> 1);
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "vga -c b -g %i\r", gain >> 1);
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
@@ -1696,9 +1680,7 @@ static int hdlr_rx_b_rf_atten_val(const char* data, char* ret, size_t ret_len) {
 	if (atten > 127)		atten = 127;
 	else if (atten < 0) 	atten = 0;
 
-	strcpy(buf, "rf -c b -a ");
-	snprintf(buf, sizeof(buf), "%i", atten);
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "rf -c b -a %i\r", atten);
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
@@ -1708,19 +1690,19 @@ static int hdlr_rx_b_rf_board_dump (const char* data, char* ret, size_t ret_len)
 	// send the uart commands and read back the output and write to file
 
 	// ADC
-	strcpy(buf, "dump -c b -a\r");
+	snprintf(buf, sizeof(buf), "dump -c b -a\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_b Chip: ADC] %s\n", uart_ret_buf);
 
 	// GPIOX
-	strcpy(buf, "dump -c b -g\r");
+	snprintf(buf, sizeof(buf), "dump -c b -g\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_b Chip: GPIOX] %s\n", uart_ret_buf);
 
 	// ADC Driver
-	strcpy(buf, "dump -c b -v\r");
+	snprintf(buf, sizeof(buf), "dump -c b -v\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_b Chip: ADC Driver] %s\n", uart_ret_buf);
@@ -1734,36 +1716,40 @@ static int hdlr_rx_b_rf_board_test (const char* data, char* ret, size_t ret_len)
 }
 
 static int hdlr_rx_b_rf_board_temp (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -c b -t\r");
+	snprintf(buf, sizeof(buf), "board -c b -t\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_b_status_rfld (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -c b -l\r");
+	snprintf(buf, sizeof(buf), "status -c b -l\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_b_status_adcalarm (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -c b -a\r");
+	snprintf(buf, sizeof(buf), "status -c b -a\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_b_rf_board_led (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -l\r");
-	strcat(buf, data);
-	strcat(buf, "\r");
+	//strcpy(buf, "board -l\r");
+	//strcat(buf, data);
+	//strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "board -l\r %i \r", data);
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
@@ -1977,7 +1963,7 @@ static int hdlr_rx_b_pwr (const char* data, char* ret, size_t ret_len) {
 		rx_power[1] = PWR_ON;
 
 		// board commands
-		strcpy(buf, "board -c b -d\r");
+		snprintf(buf, sizeof(buf), "board -c b -d\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 		usleep(200000);
 
@@ -2014,7 +2000,7 @@ static int hdlr_rx_b_pwr (const char* data, char* ret, size_t ret_len) {
 		rx_stream[1] = STREAM_OFF;
 
 		// kill the channel
-		strcpy(buf, "board -c b -k\r");
+		snprintf(buf, sizeof(buf), "board -c b -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		// disable DSP core
@@ -2092,23 +2078,24 @@ static int hdlr_tx_c_rf_dac_nco (const char* data, char* ret, size_t ret_len) {
 	snprintf(ret, ret_len, "%lf", (double)nco_steps / DAC_NCO_CONST);
 
 	//strcpy(buf, "dac -c c -e 0 -n ");
-	snprintf(buf, sizeof(buf), "%s%" PRIu32 "", "dac -c c -e 0 -n ", (uint32_t)(nco_steps >> 32));
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "dac -c c -e 0 -n %" PRIu32 "\r", (uint32_t)(nco_steps >> 32));
+	//strcat(buf, "\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	//strcpy(buf, "dac -o ");
-	snprintf(buf, sizeof(buf), "%" PRIu32 "", "dac -o ", (uint32_t)nco_steps);
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "dac -o %" PRIu32 "\r", (uint32_t)nco_steps);
+	//strcat(buf, "\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_c_rf_dac_temp (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -c c -t\r");
+	snprintf(buf, sizeof(buf), "board -c c -t\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
@@ -2119,7 +2106,7 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 
 	// if freq = 0, mute PLL
 	if ( freq == 0 ) {
-		strcpy(buf, "rf -c c -z\r");
+		snprintf(buf, sizeof(buf), "rf -c c -z\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		return RETURN_SUCCESS;
@@ -2127,7 +2114,7 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 
         // if freq out of bounds, kill channel
         if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
-		strcpy(buf, "board -c c -k\r");
+		snprintf(buf, sizeof(buf), "board -c c -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		// Turn OFF TXC on HPS
@@ -2153,7 +2140,7 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret, size_t ret_len) {
         long double outfreq = 0;
 	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c c \r");
+	snprintf(buf, sizeof(buf), "rf -c c \r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
@@ -2167,31 +2154,24 @@ static int hdlr_tx_c_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 }
 
 static int hdlr_tx_c_rf_freq_band (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "rf -c c -b ");
-	strcat(buf, data);
-	strcat(buf, "\r");
+	//strcpy(buf, "rf -c c -b ");
+	//strcat(buf, data);
+	//strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "rf -c c -b %i\r", data);
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_c_rf_freq_i_bias (const char* data, char* ret, size_t ret_len) {
    sscanf(data, "%i", &(i_bias[2]));
-   //strcpy(buf, "rf -c c -i ");
-   snprintf(buf, sizeof(buf), "%s%i", "rf -c c -i ", i_bias[2]);
-   strcat(buf, " -q ");
-   snprintf(buf, sizeof(buf), "%i", q_bias[2]);
-   strcat(buf, " -m\r");
+   snprintf(buf, sizeof(buf), "rf -c c -i %i -q %i -m\r", i_bias[2], q_bias[2]);
    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_c_rf_freq_q_bias (const char* data, char* ret, size_t ret_len) {
    sscanf(data, "%i", &(q_bias[2]));
-   //strcpy(buf, "rf -c c -i ");
-   snprintf(buf, sizeof(buf), "%s%i", "rf -c c -i ", i_bias[2]);
-   strcat(buf, " -q ");
-   sprintf(buf, sizeof(buf), "%i", q_bias[2]);
-   strcat(buf, " -m\r");
+   snprintf(buf, sizeof(buf),"rf -c c -i %i -q %i -m\r", i_bias[2], q_bias[2]);
    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
@@ -2207,8 +2187,8 @@ static int hdlr_tx_c_rf_gain_val (const char* data, char* ret, size_t ret_len) {
 	else if (gain < 0) 	gain = 0;
 
 	//strcpy(buf, "rf -c c -a ");
-	snprintf(buf, sizeof(buf), "%s%i", "rf -c c -a ", 127 - gain);
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "rf -c c -a %i\r", 127 - gain);
+	//strcat(buf, "\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
@@ -2218,13 +2198,13 @@ static int hdlr_tx_c_rf_board_dump (const char* data, char* ret, size_t ret_len)
 	// send the uart commands and read back the output and write to file
 
 	// DAC
-	strcpy(buf, "dump -c c -d\r");
+	snprintf(buf, sizeof(buf), "dump -c c -d\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
 	PRINT(DUMP, "[Board: tx_c Chip: DAC] %s\n", uart_ret_buf);
 
 	// GPIOX
-	strcpy(buf, "dump -c c -g\r");
+	snprintf(buf, sizeof(buf), "dump -c c -g\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
 	PRINT(DUMP, "[Board: tx_c Chip: GPIOX] %s\n", uart_ret_buf);
@@ -2238,45 +2218,50 @@ static int hdlr_tx_c_rf_board_test (const char* data, char* ret, size_t ret_len)
 }
 
 static int hdlr_tx_c_rf_board_temp (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -c c -t\r");
+	snprintf(buf, sizeof(buf), "board -c c -t\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_c_status_rfld (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -c c -l\r");
+	snprintf(buf, sizeof(buf), "status -c c -l\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_c_status_dacld(const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -c c -p\r");
+	snprintf(buf, sizeof(buf), "status -c c -p\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_c_status_dacctr(const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -c c -e\r");
+	snprintf(buf, sizeof(buf), "status -c c -e\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_c_rf_board_led (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -l\r");
-	strcat(buf, data);
-	strcat(buf, "\r");
+	//strcpy(buf, "board -l\r");
+	//strcat(buf, data);
+	//strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "board -l\r %i \r", data);
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
@@ -2432,7 +2417,7 @@ static int hdlr_tx_c_pwr (const char* data, char* ret, size_t ret_len) {
 		tx_power[2] = PWR_ON;
 
       // board commands
-		strcpy(buf, "board -c c -d\r");
+		strncpy(buf, "board -c c -d\r", sizeof(buf) - strlen(buf));
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 		usleep(200000);
 
@@ -2466,7 +2451,7 @@ static int hdlr_tx_c_pwr (const char* data, char* ret, size_t ret_len) {
 	// power off
 	} else {
 		// kill the channel
-		strcpy(buf, "board -c c -k\r");
+		strncpy(buf, "board -c c -k\r", sizeof(buf) - strlen(buf));
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		// disable the DSP cores
@@ -2489,7 +2474,7 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 
 	// if freq = 0, mute PLL
 	if ( freq == 0 ) {
-		strcpy(buf, "rf -c c -z\r");
+		snprintf(buf, sizeof(buf), "rf -c c -z\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		return RETURN_SUCCESS;
@@ -2497,7 +2482,7 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 
         // if freq out of bounds, kill channel
         if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
-		strcpy(buf, "board -c c -k\r");
+		snprintf(buf, sizeof(buf), "board -c c -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		// Turn OFF RXC on HPS
@@ -2524,7 +2509,7 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret, size_t ret_len) {
         long double outfreq = 0;
 	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c c \r");
+	snprintf(buf, sizeof(buf), "rf -c c \r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
@@ -2538,17 +2523,13 @@ static int hdlr_rx_c_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 }
 
 static int hdlr_rx_c_rf_freq_lna (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "rf -c c -l ");
-	strcat(buf, data);
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "rf -c c -l %i\r", data);
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_c_rf_freq_band (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "rf -c c -b ");
-	strcat(buf, data);
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "rf -c c -b %i\r", data, "\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
@@ -2563,9 +2544,7 @@ static int hdlr_rx_c_rf_gain_val (const char* data, char* ret, size_t ret_len) {
 	if (gain % 2) gain++;		// Odd Number
 
 	// 0 -> 126 gain
-	//strcpy(buf, "vga -c c -g ");
-	snprintf(buf, sizeof(buf), "%s%i", "vga -c c -g ", gain >> 1);
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "vga -c c -g %i\r", gain >> 1);
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
@@ -2578,9 +2557,7 @@ static int hdlr_rx_c_rf_atten_val(const char* data, char* ret, size_t ret_len) {
 	if (atten > 127)		atten = 127;
 	else if (atten < 0) 	atten = 0;
 
-	//strcpy(buf, "rf -c c -a ");
-	snprintf(buf, sizeof(buf), "%s%i", "rf -c c -a ", atten);
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "rf -c c -a %i\r", atten);
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
@@ -2590,19 +2567,19 @@ static int hdlr_rx_c_rf_board_dump (const char* data, char* ret, size_t ret_len)
 	// send the uart commands and read back the output and write to file
 
 	// ADC
-	strcpy(buf, "dump -c c -a\r");
+	snprintf(buf, sizeof(buf), "dump -c c -a\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_c Chip: ADC] %s\n", uart_ret_buf);
 
 	// GPIOX
-	strcpy(buf, "dump -c c -g\r");
+	snprintf(buf, sizeof(buf), "dump -c c -g\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_c Chip: GPIOX] %s\n", uart_ret_buf);
 
 	// ADC Driver
-	strcpy(buf, "dump -c c -v\r");
+	snprintf(buf, sizeof(buf), "dump -c c -v\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_c Chip: ADC Driver] %s\n", uart_ret_buf);
@@ -2616,36 +2593,40 @@ static int hdlr_rx_c_rf_board_test (const char* data, char* ret, size_t ret_len)
 }
 
 static int hdlr_rx_c_rf_board_temp (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -c c -t\r");
+	snprintf(buf, sizeof(buf), "board -c c -t\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_c_status_rfld (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -c c -l\r");
+	snprintf(buf, sizeof(buf), "status -c c -l\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_c_status_adcalarm (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -c c -a\r");
+	snprintf(buf, sizeof(buf), "status -c c -a\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_c_rf_board_led (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -l\r");
-	strcat(buf, data);
-	strcat(buf, "\r");
+	//strcpy(buf, "board -l\r");
+	//strcat(buf, data);
+	//strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "board -l\r", data, "\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
@@ -2684,7 +2665,7 @@ static int hdlr_rx_c_dsp_rate (const char* data, char* ret, size_t ret_len) {
 		write_hps_reg( "rxc1", resamp_factor);
 		read_hps_reg(  "rxc4", &old_val);
 		write_hps_reg( "rxc4", old_val | (1 << 15));
-		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		snprintf(ret, ret_len, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
 		//Set gain adjustment
 		gain_factor = decim_gain_lut[(resamp_factor)] * 1.025028298;
 		read_hps_reg( "rxga",  &old_val);
@@ -2693,7 +2674,7 @@ static int hdlr_rx_c_dsp_rate (const char* data, char* ret, size_t ret_len) {
 		write_hps_reg( "rxc1", base_factor);
 		read_hps_reg(  "rxc4", &old_val);
 		write_hps_reg( "rxc4", old_val & ~(1 << 15));
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		snprintf(ret, ret_len, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
 		//Set gain adjustment
 		gain_factor = decim_gain_lut[(resamp_factor)];
 		read_hps_reg( "rxga",  &old_val);
@@ -2729,9 +2710,9 @@ static int hdlr_rx_c_dsp_nco_adj (const char* data, char* ret, size_t ret_len) {
 	uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);
 	write_hps_reg( "rxc0", nco_steps);
 	if (direction > 0) {
-		sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);
+		snprintf(ret, ret_len, "-%lf", (double)nco_steps / DSP_NCO_CONST);
 	} else {
-		sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+		snprintf(ret, ret_len, "%lf", (double)nco_steps / DSP_NCO_CONST);
 	}
 
 	// write direction
@@ -2807,7 +2788,7 @@ static int hdlr_rx_c_stream (const char* data, char* ret, size_t ret_len) {
 
 	// if stream > 1, check the status of the stream
 	if (stream > 1) {
-		sprintf(ret, "%u", rx_stream[2]);	// Alert File Tree
+		snprintf(ret, ret_len, "%u", rx_stream[2]);	// Alert File Tree
 		return RETURN_SUCCESS;
 	}
 
@@ -2827,7 +2808,7 @@ static int hdlr_rx_c_stream (const char* data, char* ret, size_t ret_len) {
 			rx_stream[2] = STREAM_ON;
 		} else {
 			// Do not turn ON stream if channel is OFF
-			sprintf(ret, "%u", 0);	// Alert File Tree
+			snprintf(ret, ret_len, "%u", 0);	// Alert File Tree
 		}
 	} else {			// TURN THE STREAM OFF
 		// disable DSP core
@@ -2858,7 +2839,7 @@ static int hdlr_rx_c_pwr (const char* data, char* ret, size_t ret_len) {
 		rx_power[2] = PWR_ON;
 
 		// board commands
-		strcpy(buf, "board -c c -d\r");
+		snprintf(buf, sizeof(buf), "board -c c -d\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 		usleep(200000);
 
@@ -2892,7 +2873,7 @@ static int hdlr_rx_c_pwr (const char* data, char* ret, size_t ret_len) {
 	// power off
 	} else {
 		// kill the channel
-		strcpy(buf, "board -c c -k\r");
+		snprintf(buf, sizeof(buf), "board -c c -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		// disable the DSP cores
@@ -2921,7 +2902,7 @@ static int hdlr_tx_d_rf_dac_dither_en (const char* data, char* ret, size_t ret_l
 		return RETURN_ERROR_PARAM;
 	}
 	snprintf( buf, sizeof( buf ), "dac -c d -l %u\r", en );
-	sprintf( ret, "%u", en );
+	snprintf( ret, ret_len, "%u", en );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
 }
@@ -2938,7 +2919,7 @@ static int hdlr_tx_d_rf_dac_dither_mixer_en (const char* data, char* ret, size_t
 		return RETURN_ERROR_PARAM;
 	}
 	snprintf( buf, sizeof( buf ), "dac -c d -3 %u\r", en );
-	sprintf( ret, "%u", en );
+	snprintf( ret, ret_len, "%u", en );
 	send_uart_comm( uart_tx_fd, (uint8_t*)buf, strlen(buf) );
 	return RETURN_SUCCESS;
 }
@@ -2956,7 +2937,7 @@ static int hdlr_tx_d_rf_dac_dither_sra_sel (const char* data, char* ret, size_t 
 		return RETURN_ERROR_PARAM;
 	}
 
-	sprintf( ret, "%u", db );
+	snprintf( ret, ret_len, "%u", db );
 
 	 // 96 dB (max) := 0x0, 90 dB := 0x1, ... 6 dB (min) := 0xf
 	sel = 16 - ( db / 6 );
@@ -2970,26 +2951,27 @@ static int hdlr_tx_d_rf_dac_nco (const char* data, char* ret, size_t ret_len) {
 	double freq;
 	sscanf(data, "%lf", &freq);
 	uint64_t nco_steps = (uint64_t)round(freq * DAC_NCO_CONST);
-	sprintf(ret, "%lf", (double)nco_steps / DAC_NCO_CONST);
+	snprintf(ret, ret_len, "%lf", (double)nco_steps / DAC_NCO_CONST);
 
-	strcpy(buf, "dac -c d -e 1 -n ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(nco_steps >> 32));
-	strcat(buf, "\r");
+	//strcpy(buf, "dac -c d -e 1 -n ");
+	snprintf(buf, sizeof(buf), "dac -c d -e 1 -n %" PRIu32 "\r", (uint32_t)(nco_steps >> 32));
+	//strcat(buf, "\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
-	strcpy(buf, "dac -o ");
-	sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)nco_steps);
-	strcat(buf, "\r");
+	//strcpy(buf, "dac -o ");
+	snprintf(buf, sizeof(buf), "dac -o %" PRIu32 "\r", (uint32_t)nco_steps);
+	//strcat(buf, "\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_d_rf_dac_temp (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -c d -t\r");
+	snprintf(buf, sizeof(buf), "board -c d -t\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
@@ -3000,7 +2982,7 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 
 	// if freq = 0, mute PLL
 	if ( freq == 0 ) {
-		strcpy(buf, "rf -c d -z\r");
+		snprintf(buf, sizeof(buf), "rf -c d -z\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		return RETURN_SUCCESS;
@@ -3008,7 +2990,7 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 
         // if freq out of bounds, kill channel
         if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
-		strcpy(buf, "board -c d -k\r");
+		snprintf(buf, sizeof(buf), "board -c d -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		// Turn OFF TXD on HPS
@@ -3034,7 +3016,7 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret, size_t ret_len) {
         long double outfreq = 0;
 	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c d \r");
+	snprintf(buf, sizeof(buf), "rf -c d \r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
@@ -3042,37 +3024,30 @@ static int hdlr_tx_d_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 	// Send Parameters over to the MCU
 	set_pll_frequency(uart_tx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
 
-	sprintf(ret, "%lf", outfreq);
+	snprintf(ret, ret_len, "%lf", outfreq);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_d_rf_freq_band (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "rf -c d -b ");
-	strcat(buf, data);
-	strcat(buf, "\r");
+	//strcpy(buf, "rf -c d -b ");
+	//strcat(buf, data);
+	//strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "rf -c d -b %i\r", data);
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_d_rf_freq_i_bias (const char* data, char* ret, size_t ret_len) {
    sscanf(data, "%i", &(i_bias[3]));
-   strcpy(buf, "rf -c d -i ");
-   sprintf(buf + strlen(buf), "%i", i_bias[3]);
-   strcat(buf, " -q ");
-   sprintf(buf + strlen(buf), "%i", q_bias[3]);
-   strcat(buf, " -m\r");
+   snprintf(buf, sizeof(buf), "rf -c d -i %i -q %i -m\r", i_bias[3], q_bias[3]);
    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_d_rf_freq_q_bias (const char* data, char* ret, size_t ret_len) {
    sscanf(data, "%i", &(q_bias[3]));
-   strcpy(buf, "rf -c d -i ");
-   sprintf(buf + strlen(buf), "%i", i_bias[3]);
-   strcat(buf, " -q ");
-   sprintf(buf + strlen(buf), "%i", q_bias[3]);
-   strcat(buf, " -m\r");
+   snprintf(buf, sizeof(buf), "rf -c d -i %i -q %i -m\r", i_bias[3], q_bias[3]);
    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
@@ -3087,9 +3062,7 @@ static int hdlr_tx_d_rf_gain_val (const char* data, char* ret, size_t ret_len) {
 	if (gain > 127)		gain = 127;
 	else if (gain < 0) 	gain = 0;
 
-	strcpy(buf, "rf -c d -a ");
-	sprintf(buf + strlen(buf), "%i", 127 - gain);
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "rf -c d -a %i\r", 127 - gain);
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
@@ -3099,13 +3072,13 @@ static int hdlr_tx_d_rf_board_dump (const char* data, char* ret, size_t ret_len)
 	// send the uart commands and read back the output and write to file
 
 	// DAC
-	strcpy(buf, "dump -c d -d\r");
+	snprintf(buf, sizeof(buf), "dump -c d -d\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
 	PRINT(DUMP, "[Board: tx_d Chip: DAC] %s\n", uart_ret_buf);
 
 	// GPIOX
-	strcpy(buf, "dump -c d -g\r");
+	snprintf(buf, sizeof(buf), "dump -c d -g\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
 	PRINT(DUMP, "[Board: tx_d Chip: GPIOX] %s\n", uart_ret_buf);
@@ -3119,45 +3092,50 @@ static int hdlr_tx_d_rf_board_test (const char* data, char* ret, size_t ret_len)
 }
 
 static int hdlr_tx_d_rf_board_temp (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -c d -t\r");
+	snprintf(buf, sizeof(buf), "board -c d -t\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_d_status_rfld (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -c d -l\r");
+	snprintf(buf, sizeof(buf), "status -c d -l\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_d_status_dacld(const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -c d -p\r");
+	snprintf(buf, sizeof(buf), "status -c d -p\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_d_status_dacctr(const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -c d -e\r");
+	snprintf(buf, sizeof(buf), "status -c d -e\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_tx_d_rf_board_led (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -l\r");
-	strcat(buf, data);
-	strcat(buf, "\r");
+	//strcpy(buf, "board -l\r");
+	//strcat(buf, data);
+	//strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "board -l\r %i \r", data);
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
@@ -3185,7 +3163,7 @@ static int hdlr_tx_d_dsp_rate (const char* data, char* ret, size_t ret_len) {
 		write_hps_reg( "txd1", resamp_factor);
 		read_hps_reg(  "txd4", &old_val);
 		write_hps_reg( "txd4", old_val | (1 << 15));
-		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		snprintf(ret, ret_len, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
 		//Set gain adjustment
 		read_hps_reg( "txga",  &old_val);
 		write_hps_reg( "txga", (old_val & ~(0xff << 24) ) | (interp_gain_lut[(resamp_factor)] << 24));
@@ -3193,7 +3171,7 @@ static int hdlr_tx_d_dsp_rate (const char* data, char* ret, size_t ret_len) {
 		write_hps_reg( "txd1", base_factor);
 		read_hps_reg(  "txd4", &old_val);
 		write_hps_reg( "txd4", old_val & ~(1 << 15));
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		snprintf(ret, ret_len, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
 		//Set gain adjustment
 		read_hps_reg( "txga",  &old_val);
 		write_hps_reg( "txga", (old_val & ~(0xff << 24) ) | (interp_gain_lut[(base_factor)] << 24));
@@ -3228,9 +3206,9 @@ static int hdlr_tx_d_dsp_nco_adj (const char* data, char* ret, size_t ret_len) {
 	uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);
 	write_hps_reg( "txd0", nco_steps);
 	if (direction > 0) {
-		sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);
+		snprintf(ret, ret_len, "-%lf", (double)nco_steps / DSP_NCO_CONST);
 	} else {
-		sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+		snprintf(ret, ret_len, "%lf", (double)nco_steps / DSP_NCO_CONST);
 	}
 
 	// write direction
@@ -3279,7 +3257,7 @@ static int hdlr_tx_d_qa_fifo_lvl (const char* data, char* ret, size_t ret_len) {
 	uint32_t lvl;
 	read_hps_reg( "res_ro7", & lvl );
 	lvl &= 0xffff;
-	sprintf( ret, "%u", lvl );
+	snprintf( ret, ret_len, "%u", lvl );
 	return RETURN_SUCCESS;
 }
 
@@ -3287,7 +3265,7 @@ static int hdlr_tx_d_qa_oflow (const char* data, char* ret, size_t ret_len) {
 	uint32_t count;
 	// this is technically a 64-bit register, but we currently only need the bottom 32-bits
 	read_hps_reg( "flc20", & count );
-	sprintf( ret, "%u", count );
+	snprintf( ret, ret_len, "%u", count );
 	return RETURN_SUCCESS;
 }
 
@@ -3295,7 +3273,7 @@ static int hdlr_tx_d_qa_uflow (const char* data, char* ret, size_t ret_len) {
 	uint32_t count;
 	// this is technically a 64-bit register, but we currently only need the bottom 32-bits
 	read_hps_reg( "flc12", & count );
-	sprintf( ret, "%u", count );
+	snprintf( ret, ret_len, "%u", count );
 	return RETURN_SUCCESS;
 }
 
@@ -3313,7 +3291,7 @@ static int hdlr_tx_d_pwr (const char* data, char* ret, size_t ret_len) {
 		tx_power[3] = PWR_ON;
 
       // board commands
-		strcpy(buf, "board -c d -d\r");
+		snprintf(buf, sizeof(buf), "board -c d -d\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 		usleep(200000);
 
@@ -3347,7 +3325,7 @@ static int hdlr_tx_d_pwr (const char* data, char* ret, size_t ret_len) {
 	// power off
 	} else {
 		// kill the channel
-		strcpy(buf, "board -c d -k\r");
+		snprintf(buf, sizeof(buf), "board -c d -k\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 		// disable the DSP cores
@@ -3369,7 +3347,7 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 
 	// if freq = 0, mute PLL
 	if ( freq == 0 ) {
-		strcpy(buf, "rf -c d -z\r");
+		snprintf(buf, sizeof(buf), "rf -c d -z\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		return RETURN_SUCCESS;
@@ -3377,7 +3355,7 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 
         // if freq out of bounds, kill channel
         if (( freq < PLL1_RFOUT_MIN_HZ ) || (freq > PLL1_RFOUT_MAX_HZ )) {
-		strcpy(buf, "board -c d -k\r");
+		snprintf(buf, sizeof(buf), "board -c d -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		// Turn OFF RXD on HPS
@@ -3404,7 +3382,7 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret, size_t ret_len) {
         long double outfreq = 0;
 	outfreq = setFreq(&freq, &pll);
 
-	strcpy(buf, "rf -c d \r");
+	snprintf(buf, sizeof(buf), "rf -c d \r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	// TODO: pll1.power setting TBD (need to modify pllparam_t)
@@ -3412,23 +3390,25 @@ static int hdlr_rx_d_rf_freq_val (const char* data, char* ret, size_t ret_len) {
 	// Send Parameters over to the MCU
 	set_pll_frequency(uart_rx_fd, (uint64_t)PLL_CORE_REF_FREQ_HZ, &pll);
 
-	sprintf(ret, "%lf", outfreq);
+	snprintf(ret, ret_len, "%lf", outfreq);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_d_rf_freq_lna (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "rf -c d -l ");
-	strcat(buf, data);
-	strcat(buf, "\r");
+	//strcpy(buf, "rf -c d -l ");
+	//strcat(buf, data);
+	//strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "rf -c d -l %i\r", data);
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_d_rf_freq_band (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "rf -c d -b ");
-	strcat(buf, data);
-	strcat(buf, "\r");
+	//strcpy(buf, "rf -c d -b ");
+	//strcat(buf, data);
+	//strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "rf -c d -b %i\r", data);
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
@@ -3443,9 +3423,7 @@ static int hdlr_rx_d_rf_gain_val (const char* data, char* ret, size_t ret_len) {
 	if (gain % 2) gain++;		// Odd Number
 
 	// 0 -> 126 gain
-	strcpy(buf, "vga -c d -g ");
-	sprintf(buf + strlen(buf), "%i", gain >> 1);
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "vga -c d -g %i\r", gain >> 1);
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
@@ -3458,9 +3436,7 @@ static int hdlr_rx_d_rf_atten_val(const char* data, char* ret, size_t ret_len) {
 	if (atten > 127)		atten = 127;
 	else if (atten < 0) 	atten = 0;
 
-	strcpy(buf, "rf -c d -a ");
-	sprintf(buf + strlen(buf), "%i", atten);
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "rf -c d -a %i\r", atten);
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
@@ -3470,19 +3446,19 @@ static int hdlr_rx_d_rf_board_dump (const char* data, char* ret, size_t ret_len)
 	// send the uart commands and read back the output and write to file
 
 	// ADC
-	strcpy(buf, "dump -c d -a\r");
+	snprintf(buf, sizeof(buf), "dump -c d -a\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_d Chip: ADC] %s\n", uart_ret_buf);
 
 	// GPIOX
-	strcpy(buf, "dump -c d -g\r");
+	snprintf(buf, sizeof(buf), "dump -c d -g\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_d Chip: GPIOX] %s\n", uart_ret_buf);
 
 	// ADC Driver
-	strcpy(buf, "dump -c d -v\r");
+	snprintf(buf, sizeof(buf), "dump -c d -v\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
 	PRINT(DUMP, "[Board: rx_d Chip: ADC Driver] %s\n", uart_ret_buf);
@@ -3496,36 +3472,40 @@ static int hdlr_rx_d_rf_board_test (const char* data, char* ret, size_t ret_len)
 }
 
 static int hdlr_rx_d_rf_board_temp (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -c d -t\r");
+	snprintf(buf, sizeof(buf), "board -c d -t\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strcpy(ret, (char*)uart_ret_buf);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_d_status_rfld (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -c d -l\r");
+	snprintf(buf, sizeof(buf), "status -c d -l\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strcpy(ret, (char*)uart_ret_buf);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_d_status_adcalarm (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -c d -a\r");
+	snprintf(buf, sizeof(buf), "status -c d -a\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_rx_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_rx_d_rf_board_led (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -l\r");
-	strcat(buf, data);
-	strcat(buf, "\r");
+	//strcpy(buf, "board -l\r");
+	//strcat(buf, data);
+	//strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "board -l\r %i \r", data);
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
@@ -3566,7 +3546,7 @@ static int hdlr_rx_d_dsp_rate (const char* data, char* ret, size_t ret_len) {
 		write_hps_reg( "rxd1", resamp_factor);
 		read_hps_reg(  "rxd4", &old_val);
 		write_hps_reg( "rxd4", old_val | (1 << 15));
-		sprintf(ret, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
+		snprintf(ret, ret_len, "%lf", RESAMP_SAMPLE_RATE/(double)(resamp_factor + 1));
 		//Set gain adjustment
 		gain_factor = decim_gain_lut[(resamp_factor)] * 1.025028298;
 		read_hps_reg( "rxga",  &old_val);
@@ -3575,7 +3555,7 @@ static int hdlr_rx_d_dsp_rate (const char* data, char* ret, size_t ret_len) {
 		write_hps_reg( "rxd1", base_factor);
 		read_hps_reg(  "rxd4", &old_val);
 		write_hps_reg( "rxd4", old_val & ~(1 << 15));
-		sprintf(ret, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
+		snprintf(ret, ret_len, "%lf", BASE_SAMPLE_RATE/(double)(base_factor + 1));
 		//Set gain adjustment
 		gain_factor = decim_gain_lut[(resamp_factor)];
 		read_hps_reg( "rxga",  &old_val);
@@ -3611,9 +3591,9 @@ static int hdlr_rx_d_dsp_nco_adj (const char* data, char* ret, size_t ret_len) {
 	uint32_t nco_steps = (uint32_t)round(freq * DSP_NCO_CONST);
 	write_hps_reg( "rxd0", nco_steps);
 	if (direction > 0) {
-		sprintf(ret, "-%lf", (double)nco_steps / DSP_NCO_CONST);
+		snprintf(ret, ret_len, "-%lf", (double)nco_steps / DSP_NCO_CONST);
 	} else {
-		sprintf(ret, "%lf", (double)nco_steps / DSP_NCO_CONST);
+		snprintf(ret, ret_len, "%lf", (double)nco_steps / DSP_NCO_CONST);
 	}
 
 	// write direction
@@ -3689,7 +3669,7 @@ static int hdlr_rx_d_stream (const char* data, char* ret, size_t ret_len) {
 
 	// if stream > 1, check the status of the stream
 	if (stream > 1) {
-		sprintf(ret, "%u", rx_stream[3]);	// Alert File Tree
+		snprintf(ret, ret_len, "%u", rx_stream[3]);	// Alert File Tree
 		return RETURN_SUCCESS;
 	}
 
@@ -3709,7 +3689,7 @@ static int hdlr_rx_d_stream (const char* data, char* ret, size_t ret_len) {
 			rx_stream[3] = STREAM_ON;
 		} else {
 			// Do not turn ON stream if channel is OFF
-			sprintf(ret, "%u", 0);	// Alert File Tree
+			snprintf(ret, ret_len, "%u", 0);	// Alert File Tree
 		}
 	} else {			// TURN THE STREAM OFF
 		// disable DSP core
@@ -3740,7 +3720,7 @@ static int hdlr_rx_d_pwr (const char* data, char* ret, size_t ret_len) {
 		rx_power[3] = PWR_ON;
 
 		// board commands
-		strcpy(buf, "board -c d -d\r");
+		snprintf(buf, sizeof(buf), "board -c d -d\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 		usleep(200000);
 
@@ -3774,7 +3754,7 @@ static int hdlr_rx_d_pwr (const char* data, char* ret, size_t ret_len) {
 	// power off
 	} else {
 		// kill the channel
-		strcpy(buf, "board -c d -k\r");
+		snprintf(buf, sizeof(buf), "board -c d -k\r");
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 
 		// disable the DSP cores
@@ -3824,9 +3804,9 @@ static int hdlr_time_clk_cur_time (const char* data, char* ret, size_t ret_len) 
 
 static int hdlr_time_source_vco (const char* data, char* ret, size_t ret_len) {
 	if (strcmp(data, "external") == 0) {
-		strcpy(buf, "clk -v 1\r");
+		snprintf(buf, sizeof(buf), "clk -v 1\r");
 	} else if (strcmp(data, "internal") == 0) {
-		strcpy(buf, "clk -v 0\r");
+		snprintf(buf, sizeof(buf), "clk -v 0\r");
 	}
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
@@ -3834,9 +3814,9 @@ static int hdlr_time_source_vco (const char* data, char* ret, size_t ret_len) {
 
 static int hdlr_time_source_sync (const char* data, char* ret, size_t ret_len) {
 	if (strcmp(data, "external") == 0) {
-		strcpy(buf, "clk -n 1\r");
+		snprintf(buf, sizeof(buf), "clk -n 1\r");
 	} else if (strcmp(data, "internal") == 0) {
-		strcpy(buf, "clk -n 0\r");
+		snprintf(buf, sizeof(buf), "clk -n 0\r");
 	}
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
@@ -3845,9 +3825,9 @@ static int hdlr_time_source_sync (const char* data, char* ret, size_t ret_len) {
 // 10 MHz clock
 static int hdlr_time_source_ref (const char* data, char* ret, size_t ret_len) {
 	if (strcmp(data, "external") == 0) {
-		strcpy(buf, "clk -t 1\r");
+		snprintf(buf, sizeof(buf), "clk -t 1\r");
 	} else if (strcmp(data, "internal") == 0) {
-		strcpy(buf, "clk -t 0\r");
+		snprintf(buf, sizeof(buf), "clk -t 0\r");
 	}
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
@@ -3856,16 +3836,17 @@ static int hdlr_time_source_ref (const char* data, char* ret, size_t ret_len) {
 // External Source Buffer Select
 static int hdlr_time_source_extsine (const char* data, char* ret, size_t ret_len) {
 	if (strcmp(data, "sine") == 0) {
-		strcpy(buf, "HMC -h 1 -b 0\r");
+		snprintf(buf, sizeof(buf), "HMC -h 1 -b 0\r");
                 send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	} else if (strcmp(data, "LVPECL") == 0) {
-		strcpy(buf, "HMC -h 1 -b 1\r");
+		snprintf(buf, sizeof(buf), "HMC -h 1 -b 1\r");
                 send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	} else {
-                strcpy(buf, "HMC -h 1 -B\r");
+                snprintf(buf, sizeof(buf), "HMC -h 1 -B\r");
                 send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
                 read_uart(uart_synth_fd);
-                strcpy(ret, (char*)uart_ret_buf);
+                //strncpy(ret, (char*)uart_ret_buf, ret_len);
+                snprintf(ret, ret_len, (char*)uart_ret_buf);
         }
 	return RETURN_SUCCESS;
 }
@@ -3873,7 +3854,7 @@ static int hdlr_time_source_extsine (const char* data, char* ret, size_t ret_len
 // Toggle SPI Sync
 static int hdlr_time_sync_lmk_sync_tgl_jesd (const char* data, char* ret, size_t ret_len) {
 	if (strcmp(data, "0") != 0) {
-		strcpy(buf, "sync -k\r");
+		snprintf(buf, sizeof(buf), "sync -k\r");
 	} 
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
@@ -3881,7 +3862,7 @@ static int hdlr_time_sync_lmk_sync_tgl_jesd (const char* data, char* ret, size_t
 // Toggle SPI Sync
 static int hdlr_time_sync_lmk_sync_tgl_pll (const char* data, char* ret, size_t ret_len) {
 	if (strcmp(data, "0") != 0) {
-		strcpy(buf, "sync -q\r");
+		snprintf(buf, sizeof(buf), "sync -q\r");
 	} 
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
@@ -3890,7 +3871,7 @@ static int hdlr_time_sync_lmk_sync_tgl_pll (const char* data, char* ret, size_t 
 // Resync output edges with Ref
 static int hdlr_time_sync_lmk_resync_jesd (const char* data, char* ret, size_t ret_len) {
 	if (strcmp(data, "0") != 0) {
-		strcpy(buf, "sync -j\r");
+		snprintf(buf, sizeof(buf), "sync -j\r");
 	} 
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
@@ -3899,7 +3880,7 @@ static int hdlr_time_sync_lmk_resync_jesd (const char* data, char* ret, size_t r
 // Resync output edges with Ref
 static int hdlr_time_sync_lmk_resync_pll (const char* data, char* ret, size_t ret_len) {
 	if (strcmp(data, "0") != 0) {
-		strcpy(buf, "sync -p\r");
+		snprintf(buf, sizeof(buf), "sync -p\r");
 	} 
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
@@ -3908,7 +3889,7 @@ static int hdlr_time_sync_lmk_resync_pll (const char* data, char* ret, size_t re
 // Resync output edges with Ref
 static int hdlr_time_sync_lmk_resync_all (const char* data, char* ret, size_t ret_len) {
 	if (strcmp(data, "0") != 0) {
-		strcpy(buf, "sync -r\r");
+		snprintf(buf, sizeof(buf), "sync -r\r");
 	} 
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
@@ -3917,9 +3898,9 @@ static int hdlr_time_sync_lmk_resync_all (const char* data, char* ret, size_t re
 // TODO: Enable DevClock Output
 static int hdlr_time_source_devclk (const char* data, char* ret, size_t ret_len) {
 	if (strcmp(data, "external") == 0) {
-		strcpy(buf, "clk -t 1\r");
+		snprintf(buf, sizeof(buf), "clk -t 1\r");
 	} else if (strcmp(data, "internal") == 0) {
-		strcpy(buf, "clk -t 0\r");
+		snprintf(buf, sizeof(buf), "clk -t 0\r");
 	}
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
@@ -3928,9 +3909,9 @@ static int hdlr_time_source_devclk (const char* data, char* ret, size_t ret_len)
 // TODO: Enable PLL Output
 static int hdlr_time_source_pll (const char* data, char* ret, size_t ret_len) {
 	if (strcmp(data, "external") == 0) {
-		strcpy(buf, "clk -t 1\r");
+		snprintf(buf, sizeof(buf), "clk -t 1\r");
 	} else if (strcmp(data, "internal") == 0) {
-		strcpy(buf, "clk -t 0\r");
+		snprintf(buf, sizeof(buf), "clk -t 0\r");
 	}
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
@@ -3938,82 +3919,98 @@ static int hdlr_time_source_pll (const char* data, char* ret, size_t ret_len) {
 }
 
 static int hdlr_time_status_ld (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -l\r");
+	snprintf(buf, sizeof(buf), "status -l\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_synth_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, sizeof(buf) - strlen(buf));
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_time_status_ld_jesd_pll1 (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -l 11\r");
+	snprintf(buf, sizeof(buf), "status -l 11\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_synth_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_time_status_ld_jesd_pll2 (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -l 12\r");
+	snprintf(buf, sizeof(buf), "status -l 12\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_synth_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, sizeof(buf) - strlen(buf));
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_time_status_ld_pll_pll1 (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -l 21\r");
+	snprintf(buf, sizeof(buf), "status -l 21\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_synth_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_time_status_ld_pll_pll2 (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -l 22\r");
+	snprintf(buf, sizeof(buf), "status -l 22\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_synth_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_time_status_lol (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -o\r");
+	snprintf(buf, sizeof(buf), "status -o\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_synth_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_time_status_lol_jesd_pll1 (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -o 11\r");
+	snprintf(buf, sizeof(buf), "status -o 11\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_synth_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_time_status_lol_jesd_pll2 (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -o 12\r");
+	snprintf(buf, sizeof(buf), "status -o 12\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_synth_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
+
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_time_status_lol_pll_pll1 (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -o 21\r");
+	snprintf(buf, sizeof(buf), "status -o 21\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_synth_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_time_status_lol_pll_pll2 (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -o 22\r");
+	snprintf(buf, sizeof(buf), "status -o 22\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_synth_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
 	return RETURN_SUCCESS;
 }
 
@@ -4021,7 +4018,7 @@ static int hdlr_time_board_dump (const char* data, char* ret, size_t ret_len) {
 	// send the uart commands and read back the output and write to file
 
 	// Diagnostic Dump of Clk Board
-	strcpy(buf, "board -e\r");
+	snprintf(buf, sizeof(buf), "board -e\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_synth_fd);
 	PRINT(DUMP, "[Board: Time Regdump] %s\n", uart_ret_buf);
@@ -4035,18 +4032,17 @@ static int hdlr_time_board_test (const char* data, char* ret, size_t ret_len) {
 }
 
 static int hdlr_time_board_temp (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -t\r");
+	snprintf(buf, sizeof(buf), "board -t\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_synth_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_time_board_led (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -l ");
-	strcat(buf, data);
-	strcat(buf, "\r");
+	snprintf(buf, sizeof(buf), "board -l %i\r", data);
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	return RETURN_SUCCESS;
 }
@@ -4057,46 +4053,51 @@ static int hdlr_time_about_id (const char* data, char* ret, size_t ret_len) {
 }
 
 static int hdlr_time_about_serial (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -s\r");
+	snprintf(buf, sizeof(buf), "status -s\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_synth_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_time_about_mcudevid (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -d\r");
+	snprintf(buf, sizeof(buf), "status -d\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_synth_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_time_about_mcurev (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -v\r");
+	snprintf(buf, sizeof(buf), "status -v\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_synth_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
         return RETURN_SUCCESS;
 }
 
 static int hdlr_time_about_mcufuses (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "status -f\r");
+	snprintf(buf, sizeof(buf), "status -f\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_synth_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_time_about_fw_ver (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -v\r");
+	snprintf(buf, sizeof(buf), "board -v\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_synth_fd);
-	strcpy(ret, (char*)uart_ret_buf);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
@@ -4104,15 +4105,15 @@ static int hdlr_time_about_fw_ver (const char* data, char* ret, size_t ret_len) 
 static int hdlr_fpga_board_dump (const char* data, char* ret, size_t ret_len) {
 
 	// dump all of the board logs
-	hdlr_tx_a_rf_board_dump(NULL, NULL);
-	hdlr_tx_b_rf_board_dump(NULL, NULL);
-	hdlr_tx_c_rf_board_dump(NULL, NULL);
-	hdlr_tx_d_rf_board_dump(NULL, NULL);
-	hdlr_rx_a_rf_board_dump(NULL, NULL);
-	hdlr_rx_b_rf_board_dump(NULL, NULL);
-	hdlr_rx_c_rf_board_dump(NULL, NULL);
-	hdlr_rx_d_rf_board_dump(NULL, NULL);
-	hdlr_time_board_dump(NULL, NULL);
+	hdlr_tx_a_rf_board_dump(NULL, NULL, 0);
+	hdlr_tx_b_rf_board_dump(NULL, NULL, 0);
+	hdlr_tx_c_rf_board_dump(NULL, NULL, 0);
+	hdlr_tx_d_rf_board_dump(NULL, NULL, 0);
+	hdlr_rx_a_rf_board_dump(NULL, NULL, 0);
+	hdlr_rx_b_rf_board_dump(NULL, NULL, 0);
+	hdlr_rx_c_rf_board_dump(NULL, NULL, 0);
+	hdlr_rx_d_rf_board_dump(NULL, NULL, 0);
+	hdlr_time_board_dump(NULL, NULL, 0);
 
 	return RETURN_SUCCESS;
 }
@@ -4125,28 +4126,28 @@ static int hdlr_fpga_board_test (const char* data, char* ret, size_t ret_len) {
 static int hdlr_fpga_board_gle (const char* data, char* ret, size_t ret_len) {
 		
 	if (strcmp(data, "1") == 0) {
-	    strcpy(buf, "board -g 1\r");
+	    snprintf(buf, sizeof(buf), "board -g 1\r");
 	    send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	    usleep(50000);
 
-	    strcpy(buf, "board -g 1\r");
+	    snprintf(buf, sizeof(buf), "board -g 1\r");
 	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	    usleep(50000);
 
-	    strcpy(buf, "board -g 1\r");
+	    snprintf(buf, sizeof(buf), "board -g 1\r");
 	    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	    usleep(50000);
 	}
 	if (strcmp(data, "2") == 0) {
-	    strcpy(buf, "board -g 2\r");
+	    snprintf(buf, sizeof(buf), "board -g 2\r");
 	    send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	    usleep(50000);
 
-	    strcpy(buf, "board -g 2\r");
+	    snprintf(buf, sizeof(buf), "board -g 2\r");
 	    send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	    usleep(50000);
 
-	    strcpy(buf, "board -g 2\r");
+	    snprintf(buf, sizeof(buf), "board -g 2\r");
 	    send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	    usleep(50000);
 	}
@@ -4201,15 +4202,15 @@ static int hdlr_fpga_board_jesd_sync (const char* data, char* ret, size_t ret_le
 }
 
 static int hdlr_fpga_board_sys_rstreq (const char* data, char* ret, size_t ret_len) {
-	strcpy(buf, "board -r\r");
+	snprintf(buf, sizeof(buf), "board -r\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf));
 	usleep(700000);
 
-	strcpy(buf, "board -r\r");
+	snprintf(buf, sizeof(buf), "board -r\r");
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf));
 	usleep(50000);
 
-	strcpy(buf, "board -r\r");
+	snprintf(buf, sizeof(buf), "board -r\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	usleep(50000);
 
@@ -4243,7 +4244,7 @@ static int hdlr_fpga_board_flow_control_sfpX_port (const char* data, char* ret, 
 	flc0_reg |= ( udp_port << ( sfp_port * 16 ) ) & mask;
 	write_hps_reg( "flc0", flc0_reg );
 
-	sprintf( ret, "%u", udp_port );
+	snprintf( ret, sizeof(ret), "%u", udp_port );
 
 	return RETURN_SUCCESS;
 }
@@ -4303,7 +4304,7 @@ static int hdlr_fpga_about_hw_ver (const char* data, char* ret, size_t ret_len) 
 	// bits sys1[10:7]
 	old_val = (old_val >> 7) & 0xf;
 
-	sprintf(ret, "ver. 0x%02x", old_val);
+	snprintf(ret, ret_len, "ver. 0x%02x", old_val);
 	return RETURN_SUCCESS;
 }
 
@@ -4414,9 +4415,9 @@ static int hdlr_fpga_link_net_hostname (const char* data, char* ret, size_t ret_
 	char command[MAX_PROP_LEN] = {0};
 	sscanf(data, "%s", name);
 
-	strcpy(command, "echo ");
-	strcat(command, name);
-	strcat(command, " > /etc/hostname");
+	strncpy(command, "echo ", sizeof(command)-strlen(command));
+	strncat(command, name, sizeof(command)-strlen(command));
+	strncat(command, " > /etc/hostname", sizeof(command)-strlen(command));
 	system(command);
 
 	return RETURN_SUCCESS;
@@ -4434,22 +4435,22 @@ static int hdlr_fpga_link_net_ip_addr (const char* data, char* ret, size_t ret_l
 	}
 
 	// write to the file
-	strcpy(command, "sed -r -i 's/(\\b[0-9]{1,3}\\.){3}[0-9]{1,3}\\b'/");
-	strcat(command, ip_address);
-	strcat(command,	"/ /etc/init.d/mcu_init.sh");
+	snprintf(command, sizeof(command), "sed -r -i 's/(\\b[0-9]{1,3}\\.){3}[0-9]{1,3}\\b'/%s/ /etc/init.d/mcu_init.sh", ip_address);
 	system(command);
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_save_config (const char* data, char* ret, size_t ret_len) {
 	*_save_profile = 1;
-	strcpy(_save_profile_path, data);
+	//strncpy(_save_profile_path, data, sizeof(_save_profile_path));
+	snprintf(_save_profile_path, sizeof(_save_profile_path), data);
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_load_config (const char* data, char* ret, size_t ret_len) {
 	*_load_profile = 1;
-	strcpy(_load_profile_path, data);
+	//strncpy(_load_profile_path, data, sizeof(_load_profile_path));
+	snprintf(_load_profile_path, sizeof(_load_profile_path), data);
 	return RETURN_SUCCESS;
 }
 
@@ -4462,6 +4463,7 @@ static int hdlr_fpga_board_gps_time (const char* data, char* ret, size_t ret_len
 
 	snprintf(gps_split, MAX_PROP_LEN, "%i", gps_time_uh);
 	strncpy(ret, gps_split, MAX_PROP_LEN);
+	snprintf(ret, ret_len, gps_split);
 	snprintf(gps_split, MAX_PROP_LEN, "%i", gps_time_lh);
 	strncat(ret, gps_split, MAX_PROP_LEN);
 
@@ -4522,7 +4524,7 @@ static int hdlr_cm_chanmask_rx (const char *data, char *ret, size_t ret_len) {
 	}
 
 	mask &= 0xffff;
-	sprintf( ret, "%x", mask );
+	snprintf( ret, ret_len, "%x", mask );
 
 	return RETURN_SUCCESS;
 }
@@ -4535,7 +4537,7 @@ static int hdlr_cm_chanmask_tx (const char *data, char *ret, size_t ret_len) {
 	}
 
 	mask &= 0xffff;
-	sprintf( ret, "%x", mask );
+	snprintf( ret, ret_len, "%x", mask );
 
 	return RETURN_SUCCESS;
 }
@@ -4559,7 +4561,7 @@ static int hdlr_cm_rx_atten_val (const char *data, char *ret, size_t ret_len) {
 
 	sscanf( data, "%lf", & atten );
 
-	sprintf( inbuf, "%lf", atten );
+	snprintf( inbuf, sizeof(inbuf), "%lf", atten );
 
 	for( i = 0; i < NUM_CHANNELS; i++ ) {
 
@@ -4611,7 +4613,7 @@ static int hdlr_cm_rx_gain_val (const char *data, char *ret, size_t ret_len) {
 
 	sscanf( data, "%lf", & gain );
 
-	sprintf( inbuf, "%lf", gain );
+	snprintf( inbuf, sizeof(inbuf), "%lf", gain );
 
 	for( i = 0; i < NUM_CHANNELS; i++ ) {
 
@@ -4663,7 +4665,7 @@ static int hdlr_cm_tx_gain_val (const char *data, char *ret, size_t ret_len) {
 
 	sscanf( data, "%lf", & gain );
 
-	sprintf( inbuf, "%lf", gain );
+	snprintf( inbuf, sizeof(inbuf), "%lf", gain );
 
 	for( i = 0; i < NUM_CHANNELS; i++ ) {
 
@@ -4733,7 +4735,7 @@ static int hdlr_cm_trx_freq_val (const char *data, char *ret, size_t ret_len) {
 
 	write_hps_reg( "sync_mask", sync_mask );
 
-	sprintf( inbuf, "%lf", freq );
+	snprintf( inbuf, sizeof(inbuf), "%lf", freq );
 
 	for( i = 0; i < NUM_CHANNELS; i++ ) {
 
@@ -4831,7 +4833,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret, size_t ret_len) {
 
 	write_hps_reg( "sync_mask", sync_mask );
 
-	sprintf( inbuf, "%lf", freq );
+	snprintf( inbuf, sizeof(inbuf), "%lf", freq );
 
 	for( i = 0; i < NUM_CHANNELS; i++ ) {
 
@@ -5185,9 +5187,7 @@ void pass_uart_rx_fd(int fd) {
 }
 
 char* get_abs_path(prop_t* prop, char* path) {
-	strcpy(path, "/var/crimson");
-	strcat(path, "/state/");
-	strcat(path, prop -> path);
+	snprintf(path, sizeof(path), "/var/crimson/state/%s", prop -> path);
 	return path;
 }
 
@@ -5199,8 +5199,7 @@ char* get_abs_dir(prop_t* prop, char* path) {
 		i++;
 	}
 
-	strcpy(path, "/var/crimson");
-	strcat(path, "/state/");
+	snprintf(path, sizeof(path), "/var/crimson/state/");
 
 	size_t temp_len = 0;
 
@@ -5233,20 +5232,16 @@ void pass_profile_pntr_prop(uint8_t* load, uint8_t* save, char* load_path, char*
 
 void sync_channels(uint8_t chan_mask) {
 	char str_chan_mask[MAX_PROP_LEN] = "";
-	sprintf(str_chan_mask + strlen(str_chan_mask), "%" PRIu8 "", 15);
+	snprintf(str_chan_mask, sizeof(str_chan_mask), "%" PRIu8 "", 15);
 	//usleep(300000); // Some wait time for the reset to be ready
 	/* Bring the ADCs & DACs into 'demo' mode for JESD */
 
 	// RX - ADCs
-	strcpy(buf, "power -c ");
-	strcat(buf, str_chan_mask);
-	strcat(buf, " -a 1\r");
+	snprintf(buf, sizeof(buf), "power -c %s -a 1\r", str_chan_mask);
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_rx_fd );
 
 	// TX - DACs
-	strcpy(buf, "power -c ");
-	strcat(buf, str_chan_mask);
-	strcat(buf, " -d 1\r");
+	snprintf(buf, sizeof(buf), "power -c %s -d 1\r", str_chan_mask);
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
 
 	/***********************************
@@ -5268,43 +5263,41 @@ void sync_channels(uint8_t chan_mask) {
 
 		/* Initiate the SYSREF sequence for jesd
 		* Set all boards' SYSREF detection gate to ON */
-		strcpy(buf, "board -c ");
-		strcat(buf, str_chan_mask);
-		strcat(buf, " -s 1\r");
+		snprintf(buf, sizeof(buf), "board -c %s -s 1\r", str_chan_mask);
 		send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_rx_fd );
-		strcpy(buf, "board -c ");
-		strcat(buf, str_chan_mask);
-		strcat(buf, " -s 1\r");
+		snprintf(buf, sizeof(buf), "board -c %s -s 1\r", str_chan_mask);
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
 
 		/* Trigger a SYSREF pulse */
 		//JESD core out of reset
 		usleep(100000); // Some wait time for MCUs to be ready
-		strcpy(buf, "clk -y\r");
+		//strcpy(buf, "clk -y\r");
+		snprintf(buf, sizeof(buf), "clk -y\r");
 		send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_synth_fd );
 
 		//Do it again
 
-		strcpy(buf, "board -c ");
-		strcat(buf, str_chan_mask);
-		strcat(buf, " -s 1\r");
+		snprintf(buf, sizeof(buf), "board -c %s -s 1\r", str_chan_mask);
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
 		usleep(100000); // Some wait time for MCUs to be ready
-		strcpy(buf, "clk -y\r");
+		snprintf(buf, sizeof(buf), "clk -y\r");
 		send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_synth_fd );
 		usleep(100000); // Some wait time for MCUs to be ready
 
 		//CHECK IF ALARMS
-		strcpy(buf, "dac -c a -s\r");
+		snprintf(buf, sizeof(buf), "board -c %s -s 1\r", str_chan_mask);
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
 
-		strcpy(dacalarmA, (char*)uart_ret_buf);
+		//strcpy(dacalarmA, (char*)uart_ret_buf);
+		snprintf(dacalarmA, sizeof(dacalarmA), (char*)uart_ret_buf);
 
 		//CHECK IF ALARMS
-		strcpy(buf, "dac -c d -s\r");
+		//strcpy(buf, "dac -c d -s\r");
+		snprintf(buf, sizeof(buf), "dac -c d -s\r");
 		send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
 
-		strcpy(dacalarmB, (char*)uart_ret_buf);
+		//strcpy(dacalarmB, (char*)uart_ret_buf);
+		snprintf(dacalarmB, sizeof(dacalarmB), (char*)uart_ret_buf);
 
 		if ((dacalarmA[0] == key[0]) &&  (dacalarmA[1] == key[1]) &&
 			(dacalarmB[0] == key[0]) &&  (dacalarmB[1] == key[1])	){
@@ -5315,13 +5308,12 @@ void sync_channels(uint8_t chan_mask) {
 		}
 	}
 	/* Turn off all boards' SYSREF detection gates */
-	strcpy(buf, "board -c ");
-	strcat(buf, str_chan_mask);
-	strcat(buf, " -s 0\r");
+	//strcpy(buf, "board -c ");
+	//strcat(buf, str_chan_mask);
+	//strcat(buf, " -s 0\r");
+	snprintf(buf, sizeof(buf), "board -c %s -s 0\r", str_chan_mask);
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_rx_fd );
-	strcpy(buf, "board -c ");
-	strcat(buf, str_chan_mask);
-	strcat(buf, " -s 0\r");
+	snprintf(buf, sizeof(buf), "board -c %s -s 0\r", str_chan_mask);
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
 
 
@@ -5332,13 +5324,9 @@ void sync_channels(uint8_t chan_mask) {
 
 	/* Initiate the SYSREF sequence for jesd
 	* Set all boards' SYSREF detection gate to ON */
-	strcpy(buf, "board -c ");
-	strcat(buf, str_chan_mask);
-	strcat(buf, " -s 1\r");
+	snprintf(buf, sizeof(buf), "board -c %s -s 1\r", str_chan_mask);
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_rx_fd );
-	strcpy(buf, "board -c ");
-	strcat(buf, str_chan_mask);
-	strcat(buf, " -s 1\r");
+	snprintf(buf, sizeof(buf), "board -c %s -s 1\r", str_chan_mask);
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
 
 	/* Trigger a SYSREF pulse */
@@ -5346,17 +5334,14 @@ void sync_channels(uint8_t chan_mask) {
 	write_hps_reg( "res_rw7",0);
 
 	usleep(100000); // Some wait time for MCUs to be ready
-	strcpy(buf, "clk -y\r");
+	//strcpy(buf, "clk -y\r");
+	snprintf(buf, sizeof(buf), "clk -y\r");
 	send_uart_comm(uart_synth_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_synth_fd );
 
 	/* Turn off all boards' SYSREF detection gates */
-	strcpy(buf, "board -c ");
-	strcat(buf, str_chan_mask);
-	strcat(buf, " -s 0\r");
+	snprintf(buf, sizeof(buf), "board -c %s -s 0\r", str_chan_mask);
 	send_uart_comm(uart_rx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_rx_fd );
-	strcpy(buf, "board -c ");
-	strcat(buf, str_chan_mask);
-	strcat(buf, " -s 0\r");
+	snprintf(buf, sizeof(buf), "board -c %s -s 0\r", str_chan_mask);
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf)); read_uart( uart_tx_fd );
 
 #endif
@@ -5367,45 +5352,32 @@ void set_pll_frequency(int uart_fd, uint64_t reference, pllparam_t* pll) {
     // extract pll1 variables and pass to MCU (ADF4355/ADF5355)
 
     // Send Reference to MCU ( No Need ATM since fixed reference )
-    strcpy(buf, "rf -v ");
-    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)(reference/1000)); // Send reference in kHz
-    strcat(buf, "\r");
+   snprintf(buf, sizeof(buf), "rf -v %" PRIu32 "\r", (uint32_t)(reference/1000)); // Send reference in kHz
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
     // write ADF4355/5355 R
-    strcpy(buf, "rf -r ");
-    sprintf(buf + strlen(buf), "%" PRIu16 "", pll->R);
-    strcat(buf, "\r");
+    snprintf(buf, sizeof(buf), "rf -r %" PRIu16 "\r", pll->R);
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
     // write ADF4355/ADF5355 N
-    strcpy(buf, "rf -n ");
-    sprintf(buf + strlen(buf), "%" PRIu32 "", pll->N);
-    strcat(buf, "\r");
+    snprintf(buf, sizeof(buf), "rf -n %" PRIu32 "\r",  pll->N);
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
     // write ADF4355/ADF5355 D
-    strcpy(buf, "rf -d ");
-    sprintf(buf + strlen(buf), "%" PRIu16 "", pll->d);
-    strcat(buf, "\r");
+    snprintf(buf, sizeof(buf), "rf -d %" PRIu16 "\r", pll->d);
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
     // write ADF4355/ADF5355 feedback mode
-    strcpy(buf, "rf -t ");
-    sprintf(buf + strlen(buf), "%" PRIu8 "", pll->divFBen);
-    strcat(buf, "\r");
+    //strcpy(buf, "rf -t ");
+    snprintf(buf, sizeof(buf), "rf -t %" PRIu8 "\r", pll->divFBen);
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
     // write ADF4355/ADF5355 Output RF Power
-    strcpy(buf, "rf -g ");
-    sprintf(buf + strlen(buf), "%" PRIu8 "", 1 /*pll->power*/);    // default to lower mid power
-    strcat(buf, "\r");
+    snprintf(buf, sizeof(buf), "rf -g %" PRIu8 "\r", 1 /*pll->power*/);    // default to lower mid power
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
     // write ADF4355/ADF5355 Output Frequency
-    strcpy(buf, "rf -f ");
-    sprintf(buf + strlen(buf), "%" PRIu32 "", (uint32_t)((pll->vcoFreq / pll->d) / 1000)); // Send output frequency in kHz
-    strcat(buf, "\r");
+    snprintf(buf, sizeof(buf), "rf -f %" PRIu32 "\r", (uint32_t)((pll->vcoFreq / pll->d) / 1000)); // Send output frequency in kHz
     send_uart_comm(uart_fd, (uint8_t*)buf, strlen(buf));
 
 
