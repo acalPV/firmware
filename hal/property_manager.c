@@ -84,27 +84,27 @@ static void make_prop(prop_t* prop) {
 		// TODO: @CF: use mkdir(2)
 		// mkdir -p /home/root/state/*
 		strcpy(cmd, "mkdir -p ");
-		strcat(cmd, get_abs_dir(prop, path));
+		strcat(cmd, get_abs_dir(prop, path, sizeof(path)));
 		system(cmd);
 		//PRINT( VERBOSE,"executing: %s\n", cmd);
 
 		// TODO: @CF: use fchownat(2)
 		//change group for folder
 		strcpy(cmd, "chgrp dev-grp0 -R ");
-		strcat(cmd, get_abs_dir(prop, path));
+		strcat(cmd, get_abs_dir(prop, path, sizeof(path)));
 		system(cmd);
 
 		// TODO: replace with openat(2)
 		// touch /home/root/state/*
 		strcpy(cmd, "touch ");
-		strcat(cmd, get_abs_path(prop, path));
+		strcat(cmd, get_abs_path(prop, path, sizeof(path)));
 		system(cmd);
 		//PRINT( VERBOSE,"executing: %s\n", cmd);
 
 		// TODO: @CF: use fchownat(2)
 		//change group for properties
 		strcpy(cmd, "chgrp dev-grp0 ");
-		strcat(cmd, get_abs_path(prop, path));
+		strcat(cmd, get_abs_path(prop, path, sizeof(path)));
 		system(cmd);
 
 		// TODO: @CF: use fchmodat(2)
@@ -112,13 +112,13 @@ static void make_prop(prop_t* prop) {
 		if (prop -> permissions == RO) {
 			// chmod a-w /home/root/state/*
 			strcpy(cmd, "chmod 0444 ");
-			strcat(cmd, get_abs_path(prop, path));
+			strcat(cmd, get_abs_path(prop, path, sizeof(path)));
 			system(cmd);
 		} else if (prop -> permissions == WO) {
 			// TODO: @CF: use fchmodat(2)
 			// chmod a-r /home/root/state/*
 			strcpy(cmd, "chmod 0222 ");
-			strcat(cmd, get_abs_path(prop, path));
+			strcat(cmd, get_abs_path(prop, path, sizeof(path)));
 			system(cmd);
 		}
 
@@ -131,14 +131,14 @@ static void make_prop(prop_t* prop) {
 		// TODO: @CF: use mkdir(2)
 		// mkdir -p /home/root/state/*
 		strcpy(cmd, "mkdir -p ");
-		strcat(cmd, get_abs_dir(prop, path));
+		strcat(cmd, get_abs_dir(prop, path, sizeof(path)));
 		system(cmd);
 		//PRINT( VERBOSE,"executing: %s\n", cmd);
 
 		// TODO: @CF: use fchownat(2)
 		//change group for folder
 		strcpy(cmd, "chgrp dev-grp0 -R ");
-		strcat(cmd, get_abs_dir(prop, path));
+		strcat(cmd, get_abs_dir(prop, path, sizeof(path)));
 		system(cmd);
 
 		snprintf( cmd, sizeof(cmd), "rm -Rf /var/crimson/state/%s", prop->path );
@@ -162,7 +162,7 @@ static void add_prop_to_inotify(prop_t* prop) {
 	// check if RO property
 	if (prop -> permissions != RO) {
 		prop -> wd = inotify_add_watch( inotify_fd,
-			get_abs_path(prop, path), IN_CLOSE_WRITE);
+			get_abs_path(prop, path, sizeof(path)), IN_CLOSE_WRITE);
 	}
 
 	if (prop -> wd < 0)
@@ -185,7 +185,7 @@ static void init_prop_val(prop_t* prop) {
 
 	// if not WO property
 	if  (prop -> permissions != WO) {
-		write_to_file(get_abs_path(prop, path), prop -> def_val);
+		write_to_file(get_abs_path(prop, path, sizeof(path)), prop -> def_val);
 	}
 }
 
@@ -290,7 +290,7 @@ void check_property_inotifies(void) {
 			memset(prop_ret,  0, MAX_PROP_LEN);
 
 			// read the change from the file
-			read_from_file(get_abs_path(prop, path), prop_data, MAX_PROP_LEN);
+			read_from_file(get_abs_path(prop, path, sizeof(path)), prop_data, MAX_PROP_LEN);
 			strcpy(prop_ret, prop_data);
 
 			PRINT( DEBUG,"Inotify handler [Prop: %s Data: %s]\n", prop -> path, prop_data);
@@ -309,10 +309,10 @@ void check_property_inotifies(void) {
 				PRINT( VERBOSE,"Removed inotify, wd: %i\n", prop -> wd);
 
 				// write output of handler to property
-				write_to_file(get_abs_path(prop, path), prop_ret);
+				write_to_file(get_abs_path(prop, path, sizeof(path)), prop_ret);
 
 				// re-add property to inotify
-				prop -> wd = inotify_add_watch( inotify_fd, get_abs_path(prop, path), IN_CLOSE_WRITE);
+				prop -> wd = inotify_add_watch( inotify_fd, get_abs_path(prop, path, sizeof(path)), IN_CLOSE_WRITE);
 				if (prop -> wd < 0) {
 					PRINT( ERROR, "%s(), %s\n", __func__, strerror(errno));
 				}
@@ -421,7 +421,7 @@ int get_property(const char* prop, char* data, size_t max_len) {
 		return RETURN_ERROR_GET_PROP;
 	}
 
-	read_from_file(get_abs_path(temp, path), data, max_len);
+	read_from_file(get_abs_path(temp, path, sizeof(path)), data, max_len);
 	return RETURN_SUCCESS;
 }
 
@@ -459,7 +459,7 @@ void power_on_channel( bool tx, int channel ) {
 		PRINT( ERROR,"Cannot find prop for command '%s'\n", buf);
 		return;
 	}
-	write_to_file(get_abs_path(prop, buf), "1");
+	write_to_file(get_abs_path(prop, buf, sizeof(buf)), "1");
 }
 
 void power_on_channel_fixup( char *path ) {
@@ -496,7 +496,7 @@ int set_property(const char* prop, const char* data) {
 	// (enabling the channel later will erase the current channels, so enable now)
 	power_on_channel_fixup( temp->path );
 
-	write_to_file( get_abs_path( temp, path ), data );
+	write_to_file( get_abs_path( temp, path, sizeof(path)), data );
 
 	check_property_inotifies();
 

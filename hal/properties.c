@@ -5190,12 +5190,12 @@ void pass_uart_rx_fd(int fd) {
 	uart_rx_fd = fd;
 }
 
-char* get_abs_path(prop_t* prop, char* path) {
-	snprintf(path, sizeof(path), "/var/crimson/state/%s", prop -> path);
+char* get_abs_path(prop_t* prop, char* path, size_t path_len) {
+	snprintf(path, path_len, "/var/crimson/state/%s", prop -> path);
 	return path;
 }
 
-char* get_abs_dir(prop_t* prop, char* path) {
+char* get_abs_dir(prop_t* prop, char* path, size_t path_len) {
 	size_t len = 0;
 	size_t i = 0;
 	while (prop -> path[i]) {
@@ -5203,7 +5203,7 @@ char* get_abs_dir(prop_t* prop, char* path) {
 		i++;
 	}
 
-	snprintf(path, sizeof(path), "/var/crimson/state/");
+	snprintf(path, path_len, "/var/crimson/state/");
 
 	size_t temp_len = 0;
 
