@@ -218,10 +218,10 @@ static int hdlr_tx_a_rf_dac_nco (const char* data, char* ret, size_t ret_len) {
 	uint64_t nco_steps = (uint64_t)round(freq * DAC_NCO_CONST);
 	snprintf(ret, ret_len, "%lf", (double)nco_steps / DAC_NCO_CONST);
 
-	snprintf( buf, sizeof( buf ), "%s%" PRIu32 "\r", "dac -c a -e 0 -n ", (uint32_t)(nco_steps >> 32) );
+	snprintf( buf, sizeof( buf ), "dac -c a -e 0 -n %" PRIu32 "\r", (uint32_t)(nco_steps >> 32) );
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
-	snprintf( buf, sizeof( buf ), "%s%" PRIu32 "\r", "dac -o ", (uint32_t)nco_steps );
+	snprintf( buf, sizeof( buf ), "dac -o %" PRIu32 "\r", (uint32_t)nco_steps );
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 
 	return RETURN_SUCCESS;
@@ -354,7 +354,8 @@ static int hdlr_tx_a_rf_board_temp (const char* data, char* ret, size_t ret_len)
 	snprintf(buf, sizeof(buf), "board -c a -t\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strncpy(ret, (char*)uart_ret_buf, ret_len);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
@@ -363,7 +364,8 @@ static int hdlr_tx_a_status_rfld (const char* data, char* ret, size_t ret_len) {
 	snprintf(buf, sizeof(buf), "status -c a -l\r");
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strncpy(ret, (char*)uart_ret_buf, ret_len);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
@@ -372,7 +374,8 @@ static int hdlr_tx_a_status_dacld(const char* data, char* ret, size_t ret_len) {
 	strncpy(buf, "status -c a -p\r", sizeof(buf) - strlen(buf));
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strncpy(ret, (char*)uart_ret_buf, ret_len);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
@@ -381,7 +384,8 @@ static int hdlr_tx_a_status_dacctr(const char* data, char* ret, size_t ret_len) 
 	strncpy(buf, "status -c a -e\r", sizeof(buf) - strlen(buf));
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
-	strncpy(ret, (char*)uart_ret_buf, ret_len);
+	//strncpy(ret, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
@@ -530,7 +534,7 @@ static int hdlr_tx_about_fw_ver (const char* data, char* ret, size_t ret_len) {
 	send_uart_comm(uart_tx_fd, (uint8_t*)buf, strlen(buf));
 	read_uart(uart_tx_fd);
 	//strncpy(ret, (char*)uart_ret_buf, ret_len);
-	snprintf(ret, ret_len, (char*)uart_ret_buf, ret_len);
+	snprintf(ret, ret_len, (char*)uart_ret_buf);
 
 	return RETURN_SUCCESS;
 }
@@ -4552,7 +4556,7 @@ static int hdlr_cm_rx_atten_val (const char *data, char *ret, size_t ret_len) {
 
 	int wd_backup;
 	prop_t *prop;
-	int (*hdlr)( const char *, char *);
+	int (*hdlr)( const char *, char *, size_t);
 	int i;
 
 	int atten = 0;
@@ -4578,7 +4582,7 @@ static int hdlr_cm_rx_atten_val (const char *data, char *ret, size_t ret_len) {
 		}
 
 		// call the handler directly
-		r = hdlr( inbuf, outbuf );
+		r = hdlr( inbuf, outbuf, sizeof(outbuf));
 		if( RETURN_SUCCESS != r ) {
 			return r;
 		}
@@ -4604,7 +4608,7 @@ static int hdlr_cm_rx_gain_val (const char *data, char *ret, size_t ret_len) {
 
 	int wd_backup;
 	prop_t *prop;
-	int (*hdlr)( const char *, char *);
+	int (*hdlr)( const char *, char *, size_t);
 	int i;
 
 	double gain = 0;
@@ -4630,7 +4634,7 @@ static int hdlr_cm_rx_gain_val (const char *data, char *ret, size_t ret_len) {
 		}
 
 		// call the handler directly
-		r = hdlr( inbuf, outbuf );
+		r = hdlr( inbuf, outbuf, sizeof(outbuf));
 		if( RETURN_SUCCESS != r ) {
 			return r;
 		}
@@ -4656,7 +4660,7 @@ static int hdlr_cm_tx_gain_val (const char *data, char *ret, size_t ret_len) {
 
 	int wd_backup;
 	prop_t *prop;
-	int (*hdlr)( const char *, char *);
+	int (*hdlr)( const char *, char *, size_t);
 	int i;
 
 	double gain = 0;
@@ -4682,7 +4686,7 @@ static int hdlr_cm_tx_gain_val (const char *data, char *ret, size_t ret_len) {
 		}
 
 		// call the handler directly
-		r = hdlr( inbuf, outbuf );
+		r = hdlr( inbuf, outbuf, sizeof(outbuf));
 		if( RETURN_SUCCESS != r ) {
 			return r;
 		}
@@ -4712,7 +4716,7 @@ static int hdlr_cm_trx_freq_val (const char *data, char *ret, size_t ret_len) {
 
 	int wd_backup;
 	prop_t *prop;
-	int (*hdlr)( const char *, char *);
+	int (*hdlr)( const char *, char *, size_t);
 	int i;
 
 	double freq = 0;
@@ -4752,7 +4756,7 @@ static int hdlr_cm_trx_freq_val (const char *data, char *ret, size_t ret_len) {
 		}
 
 		// call the handler directly
-		r = hdlr( inbuf, outbuf );
+		r = hdlr( inbuf, outbuf, sizeof(outbuf));
 		if( RETURN_SUCCESS != r ) {
 			return r;
 		}
@@ -4780,7 +4784,7 @@ static int hdlr_cm_trx_freq_val (const char *data, char *ret, size_t ret_len) {
 		}
 
 		// call the handler directly
-		r = hdlr( inbuf, outbuf );
+		r = hdlr( inbuf, outbuf, sizeof(outbuf));
 		if( RETURN_SUCCESS != r ) {
 			return r;
 		}
@@ -4810,7 +4814,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret, size_t ret_len) {
 
 	int wd_backup;
 	prop_t *prop;
-	int (*hdlr)( const char *, char *);
+	int (*hdlr)( const char *, char *, size_t);
 	int i;
 
 	double freq = 0;
@@ -4850,7 +4854,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret, size_t ret_len) {
 		}
 
 		// call the handler directly
-		r = hdlr( inbuf, outbuf );
+		r = hdlr( inbuf, outbuf, sizeof(outbuf));
 		if( RETURN_SUCCESS != r ) {
 			return r;
 		}
@@ -4878,7 +4882,7 @@ static int hdlr_cm_trx_nco_adj (const char *data, char *ret, size_t ret_len) {
 		}
 
 		// call the handler directly
-		r = hdlr( inbuf, outbuf );
+		r = hdlr( inbuf, outbuf, sizeof(outbuf));
 		if( RETURN_SUCCESS != r ) {
 			return r;
 		}
