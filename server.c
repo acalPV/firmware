@@ -29,6 +29,7 @@
 #include <inttypes.h>
 #include <sys/select.h>
 #include <sys/time.h>
+#include <syslog.h>
 #include "common.h"
 #include "mmap.h"
 #include "comm_manager.h"
@@ -135,6 +136,12 @@ int main(int argc, char *argv[]) {
 			options |= SERVER_DEBUG_OPT;
 	}
 
+#ifdef HAVE_SYSLOG
+	// enable logging
+	openlog( fc->ident, 0, LOG_DAEMON );
+	setlogmask( LOG_UPTO( LOG_VERBOSE ) );
+#endif
+
 	// Initialize network communications for each port
 	for( i = 0; i < num_udp_ports; i++) {
 		if ( init_udp_comm(&(comm_fds[i]), ENET_DEV, port_nums[i], 0) < 0 ) {
@@ -214,13 +221,17 @@ int main(int argc, char *argv[]) {
 				PRINT( VERBOSE, "port %d has data\n", port_nums[ i ] );
 
 				sa_len = sizeof( sa );
-				ret2 = recvfrom( comm_fds[ i ], buffer, sizeof( buffer ), 0, (struct sockaddr *) & sa, & sa_len );
+				memset(buffer, 0, sizeof(buffer));
+
+				ret2 = recvfrom( comm_fds[ i ], buffer, sizeof( buffer ) - 1, 0, (struct sockaddr *) & sa, & sa_len );
 				if ( ret2 < 0 ) {
 					PRINT( ERROR, "recvfrom failed: %s (%d)\n", strerror( errno ), errno );
 					ret--;
 					continue;
 				}
 
+				// buffer must *ALWAYS* be NULL-terminated for parse_cmd!!!
+				buffer[ret2] = '\0';
 				if ( RETURN_SUCCESS != parse_cmd(&cmd, buffer) ) {
 
 					PRINT( VERBOSE, "failed to parse command\n" );

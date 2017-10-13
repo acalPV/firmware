@@ -37,6 +37,21 @@ AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 AC_TYPE_UINT8_T
 
+# Enable Unit Tests and install examples
+AC_ARG_ENABLE([gtest],AS_HELP_STRING([--enable-gtest],[Enable Unit Tests with Google Test Framework (requires cpp)]),,[enable_gtest="auto"])
+AS_IF([test "x$enable_gtest" != "xno"], [
+	enable_gtest="yes"
+])
+dnl XXX: @CF: fix gtest-config and gtest.m4
+dnl GTEST_LIB_CHECK([1.7.0])
+GTEST_CPPFLAGS="-I/home/acal/Downloads/googletest-install/usr/local/include"
+AC_SUBST([GTEST_CPPFLAGS])
+GTEST_LDFLAGS="-L/home/acal/Downloads/googletest-install/usr/local/lib"
+AC_SUBST([GTEST_LDFLAGS])
+GTEST_LIBS="-lgtest -lgtest_main"
+AC_SUBST([GTEST_LIBS])
+AM_CONDITIONAL([HAVE_GTEST],[test "x$enable_cpp" = "xyes" -a "x$enable_gtest" = "xyes"])
+
 # Checks for library functions.
 AC_FUNC_ERROR_AT_LINE
 AC_FUNC_MALLOC

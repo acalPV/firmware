@@ -83,42 +83,48 @@ static void make_prop(prop_t* prop) {
 
 		// TODO: @CF: use mkdir(2)
 		// mkdir -p /home/root/state/*
-		strcpy(cmd, "mkdir -p ");
-		strcat(cmd, get_abs_dir(prop, path, sizeof(path)));
+		//strcpy(cmd, "mkdir -p ");
+		//strcat(cmd, get_abs_dir(prop, path, sizeof(path)));
+		snprintf(cmd, sizeof(cmd), "mkdir -p %s", get_abs_dir(prop, path, sizeof(path)));
 		system(cmd);
 		//PRINT( VERBOSE,"executing: %s\n", cmd);
 
 		// TODO: @CF: use fchownat(2)
 		//change group for folder
-		strcpy(cmd, "chgrp dev-grp0 -R ");
-		strcat(cmd, get_abs_dir(prop, path, sizeof(path)));
+		//strcpy(cmd, "chgrp dev-grp0 -R ");
+		//strcat(cmd, get_abs_dir(prop, path, sizeof(path)));
+		snprintf(cmd, sizeof(cmd), "chgrp dev-grp0 -R %s", get_abs_dir(prop, path, sizeof(path)));
 		system(cmd);
 
 		// TODO: replace with openat(2)
 		// touch /home/root/state/*
-		strcpy(cmd, "touch ");
-		strcat(cmd, get_abs_path(prop, path, sizeof(path)));
+		//strcpy(cmd, "touch ");
+		//strcat(cmd, get_abs_path(prop, path, sizeof(path)));
+		snprintf(cmd, sizeof(cmd), "touch %s", get_abs_path(prop, path, sizeof(path)));
 		system(cmd);
 		//PRINT( VERBOSE,"executing: %s\n", cmd);
 
 		// TODO: @CF: use fchownat(2)
 		//change group for properties
-		strcpy(cmd, "chgrp dev-grp0 ");
-		strcat(cmd, get_abs_path(prop, path, sizeof(path)));
+		//strcpy(cmd, "chgrp dev-grp0 ");
+		//strcat(cmd, get_abs_path(prop, path, sizeof(path)));
+		snprintf(cmd, sizeof(cmd), "chgrp dev-grp0 %s", get_abs_path(prop, path, sizeof(path)));
 		system(cmd);
 
 		// TODO: @CF: use fchmodat(2)
 		// if read only property, change permissions
 		if (prop -> permissions == RO) {
 			// chmod a-w /home/root/state/*
-			strcpy(cmd, "chmod 0444 ");
-			strcat(cmd, get_abs_path(prop, path, sizeof(path)));
+			//strcpy(cmd, "chmod 0444 ");
+			//strcat(cmd, get_abs_path(prop, path, sizeof(path)));
+			snprintf(cmd, sizeof(cmd), "chmod 0444 %s", get_abs_path(prop, path, sizeof(path)));
 			system(cmd);
 		} else if (prop -> permissions == WO) {
 			// TODO: @CF: use fchmodat(2)
 			// chmod a-r /home/root/state/*
-			strcpy(cmd, "chmod 0222 ");
-			strcat(cmd, get_abs_path(prop, path, sizeof(path)));
+			//strcpy(cmd, "chmod 0222 ");
+			//strcat(cmd, get_abs_path(prop, path, sizeof(path)));
+			snprintf(cmd, sizeof(cmd), "chmod 0222 %s", get_abs_path(prop, path, sizeof(path)));
 			system(cmd);
 		}
 
@@ -130,15 +136,17 @@ static void make_prop(prop_t* prop) {
 
 		// TODO: @CF: use mkdir(2)
 		// mkdir -p /home/root/state/*
-		strcpy(cmd, "mkdir -p ");
-		strcat(cmd, get_abs_dir(prop, path, sizeof(path)));
+		//strcpy(cmd, "mkdir -p ");
+		//strcat(cmd, get_abs_dir(prop, path, sizeof(path)));
+		snprintf(cmd, sizeof(cmd), "mkdir -p %s", get_abs_dir(prop, path, sizeof(path)));
 		system(cmd);
 		//PRINT( VERBOSE,"executing: %s\n", cmd);
 
 		// TODO: @CF: use fchownat(2)
 		//change group for folder
-		strcpy(cmd, "chgrp dev-grp0 -R ");
-		strcat(cmd, get_abs_dir(prop, path, sizeof(path)));
+		//strcpy(cmd, "chgrp dev-grp0 -R ");
+		//strcat(cmd, get_abs_dir(prop, path, sizeof(path)));
+		snprintf(cmd, sizeof(cmd), "chgrp dev-grp0 -R %s", get_abs_dir(prop, path, sizeof(path)));
 		system(cmd);
 
 		snprintf( cmd, sizeof(cmd), "rm -Rf /var/crimson/state/%s", prop->path );
@@ -269,10 +277,10 @@ int init_property(uint8_t options) {
 
 // non-standard set property (file modification)
 void check_property_inotifies(void) {
-	uint8_t buf[EVENT_BUF_LEN];
-	char prop_data[MAX_PROP_LEN];
-	char prop_ret[MAX_PROP_LEN];
-	char path[MAX_PATH_LEN];
+	uint8_t buf[EVENT_BUF_LEN] = {0};
+	char prop_data[MAX_PROP_LEN] = "\0";
+	char prop_ret[MAX_PROP_LEN] = "\0";
+	char path[MAX_PATH_LEN] = "\0";
 	ssize_t len = read(inotify_fd, buf, EVENT_BUF_LEN);
 
 	ssize_t i = 0;
@@ -282,22 +290,22 @@ void check_property_inotifies(void) {
 		prop_t* prop = get_prop_from_wd(event -> wd);
 
 		// check if prop exists, prop will not exist if concurrent modifications were made to the file while in this loop
-		if (event -> mask & IN_CLOSE_WRITE && prop) {
-			PRINT( VERBOSE,"Property located at %s has been modified, executing handler\n", prop -> path);
+		if ( (event -> mask & IN_CLOSE_WRITE) && prop) {
+			PRINT( INFO,"Property located at %s has been modified, executing handler\n", prop -> path);
 
 			// empty out the buffers
-			memset(prop_data, 0, MAX_PROP_LEN);
+			memset(prop_data, 0, MAX_PROP_LEN); //This should already be done at initialization
 			memset(prop_ret,  0, MAX_PROP_LEN);
 
 			// read the change from the file
 			read_from_file(get_abs_path(prop, path, sizeof(path)), prop_data, MAX_PROP_LEN);
-			strcpy(prop_ret, prop_data);
+			strncpy(prop_ret, prop_data, sizeof(prop_ret));
 
-			PRINT( DEBUG,"Inotify handler [Prop: %s Data: %s]\n", prop -> path, prop_data);
+			PRINT( INFO,"Inotify handler [Prop: %s Data: %s]\n", prop -> path, prop_data);
 			prop -> handler(prop_data, prop_ret, sizeof(prop_ret));
 			if (prop->permissions == RO) {
 				memset(prop_ret, 0, sizeof(prop_ret));
-				sprintf(prop_ret, "%s", prop->def_val);
+				snprintf(prop_ret, sizeof(prop_ret), "%s", prop->def_val);
 			}
 
 			// if the return value didn't change, don't write to file again
@@ -306,7 +314,7 @@ void check_property_inotifies(void) {
 				if (inotify_rm_watch( inotify_fd, prop -> wd) < 0) {
 					PRINT( ERROR, "%s(), %s\n", __func__, strerror(errno));
 				}
-				PRINT( VERBOSE,"Removed inotify, wd: %i\n", prop -> wd);
+				PRINT( INFO,"Removed inotify, wd: %i\n", prop -> wd);
 
 				// write output of handler to property
 				write_to_file(get_abs_path(prop, path, sizeof(path)), prop_ret);
@@ -316,7 +324,7 @@ void check_property_inotifies(void) {
 				if (prop -> wd < 0) {
 					PRINT( ERROR, "%s(), %s\n", __func__, strerror(errno));
 				}
-				PRINT( VERBOSE,"Re-added to inotify, wd: %i\n", prop -> wd);
+				PRINT( INFO,"Re-added to inotify, wd: %i\n", prop -> wd);
 			}
 		}
 
@@ -388,7 +396,7 @@ int load_properties(const char* file) {
 		prop_val++;
 
 		// get pointer to current property
-		strcpy(cur_prop -> def_val, prop_val);
+		strncpy(cur_prop -> def_val, prop_val, sizeof(cur_prop -> def_val));
 
 		if ( PROP_TYPE_FILE == cur_prop->type ) {
 			// write the current property to device
@@ -450,7 +458,7 @@ int get_channel_for_path( const char *path ) {
 }
 
 void power_on_channel( bool tx, int channel ) {
-	char buf[ MAX_PATH_LEN ];
+	char buf[ MAX_PATH_LEN ] = "\0";
 	prop_t *prop;
 
 	snprintf( buf, sizeof( buf ), "%s/%c/pwr", tx ? "tx" : "rx", 'a' + channel );
@@ -477,7 +485,7 @@ void power_on_channel_fixup( char *path ) {
 int set_property(const char* prop, const char* data) {
 	PRINT( VERBOSE,"%s(): %s\n", __func__, prop);
 
-	char path [MAX_PATH_LEN];
+	char path [MAX_PATH_LEN] = "\0";
 	prop_t* temp = get_prop_from_cmd(prop);
 
 	// check if valid property
@@ -488,7 +496,7 @@ int set_property(const char* prop, const char* data) {
 
 	// check if RO property
 	if (temp -> permissions == RO) {
-		PRINT( ERROR,"Cannot invoke a set on this property\n");
+		PRINT( ERROR,"Property: %s cannot have set called (Read Only)\n", prop);
 		return RETURN_ERROR_SET_PROP;
 	}
 

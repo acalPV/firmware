@@ -180,9 +180,9 @@ static void flow_init( struct flow_context *fc ) {
 #ifdef HAVE_SYSLOG
 	// enable logging
 	openlog( fc->ident, 0, LOG_DAEMON );
-	setlogmask( LOG_UPTO( LOG_INFO ) );
+	setlogmask( LOG_UPTO( LOG_VERBOSE ) );
 	// could be conditional, e.g. if command-line argument exists to enable / disable debug
-	setlogmask( setlogmask( 0 ) | LOG_MASK( LOG_DEBUG ) );
+	//setlogmask( setlogmask( 0 ) | LOG_MASK( LOG_DEBUG ) );
 #endif
 
 	// set the global variable for signal handlers
