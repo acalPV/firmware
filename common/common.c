@@ -84,7 +84,7 @@ int PRINT( print_t priority, const char* format, ... ) {
 
 	if (priority == VERBOSE) {
 		// do nothing as of now
-		//ret = vprintf(newfmt, args);
+		ret = vprintf(newfmt, args);
 	}
 
 	// flush the file

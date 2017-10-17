@@ -197,6 +197,8 @@ int main(int argc, char *argv[]) {
 		switch( ret ) {
 
 		case 0:
+			PRINT( VERBOSE, "select timed-out\n" );
+			break;
 		case -1:
 
 			if ( 0 == ret ) {
@@ -229,7 +231,7 @@ int main(int argc, char *argv[]) {
 					ret--;
 					continue;
 				}
-
+				PRINT(VERBOSE, "ret2 = %u , buffer_len = %u\n", ret2, strlen(buffer));
 				// buffer must *ALWAYS* be NULL-terminated for parse_cmd!!!
 				buffer[ret2] = '\0';
 				if ( RETURN_SUCCESS != parse_cmd(&cmd, buffer) ) {
@@ -257,6 +259,7 @@ int main(int argc, char *argv[]) {
 
 				build_cmd(&cmd, buffer, UDP_PAYLOAD_LEN);
 				ret2 = sendto( comm_fds[ i ], buffer, strlen( (char *) buffer ), 0, (struct sockaddr *) & sa, sa_len );
+				PRINT(VERBOSE, "response = %s\n", buffer);
 				if ( ret2 < 0 ) {
 					PRINT( ERROR, "sendto failed: %s (%d)\n", strerror( errno ), errno );
 					ret--;
@@ -266,6 +269,7 @@ int main(int argc, char *argv[]) {
 				PRINT( VERBOSE, "sent reply on port %d\n", port_nums[ i ] );
 
 				ret--;
+				FD_CLR( comm_fds[ i ], & rfds );
 			}
 
 
@@ -290,6 +294,7 @@ int main(int argc, char *argv[]) {
 				}
 
 				ret--;
+				FD_CLR( inotify_fd, & rfds );
 			}
 
 			if ( 0 != ret ) {

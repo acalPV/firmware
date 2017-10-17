@@ -281,14 +281,26 @@ void check_property_inotifies(void) {
 	char prop_data[MAX_PROP_LEN] = "\0";
 	char prop_ret[MAX_PROP_LEN] = "\0";
 	char path[MAX_PATH_LEN] = "\0";
+	int n;
+
+	ioctl(inotify_fd, FIONREAD, &n);
+	PRINT(VERBOSE, "Debug - bytes available for read: %i\n", n);
+	if (n == 0){
+		PRINT(ERROR, "No bytes available to for read on fd\n");
+		return;
+	}
+	//for debug only - remove later
 	ssize_t len = read(inotify_fd, buf, EVENT_BUF_LEN);
+	PRINT(VERBOSE, "DEBUG - inotify_fd_len = %u\n", len);
 
 	ssize_t i = 0;
 	while (i < len) {
 		// gets the event structure
 		struct inotify_event* event = (struct inotify_event*) &buf[i];
-		prop_t* prop = get_prop_from_wd(event -> wd);
 
+		prop_t* prop = get_prop_from_wd(event -> wd);
+		PRINT(VERBOSE, "DEBUG - prop_from_wd= %x\n", prop);
+		PRINT(VERBOSE, "DEBUG - event_mask= %x\n", event -> mask);
 		// check if prop exists, prop will not exist if concurrent modifications were made to the file while in this loop
 		if ( (event -> mask & IN_CLOSE_WRITE) && prop) {
 			PRINT( INFO,"Property located at %s has been modified, executing handler\n", prop -> path);
@@ -327,7 +339,8 @@ void check_property_inotifies(void) {
 				PRINT( INFO,"Re-added to inotify, wd: %i\n", prop -> wd);
 			}
 		}
-
+		//for debug only - remove later
+		PRINT(VERBOSE, "DEBUG - exiting check_properties_inotifies()\n");
 		i += sizeof(struct inotify_event) + event -> len;
 	}
 }

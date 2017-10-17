@@ -159,16 +159,25 @@ static int hdlr_invalid (const char* data, char* ret, size_t ret_len) {
 static int hdlr_ro (const char* data, char* ret, size_t ret_len) {
 	char ro_retval[128] = "\0";
 	snprintf(buf, sizeof(buf), "RO Property Init: %s\r", data);
-	strncpy(ret, ro_retval, ret_len);
+	//strncpy(ret, ro_retval, ret_len);
+	snprintf(ret, ret_len, ro_retval);
 	return RETURN_SUCCESS;
 }
 
 static int hdlr_nop (const char* data, char* ret, size_t ret_len) {
 	char nop_retval[128] = "\0";
 	snprintf(buf, sizeof(buf), "NOP Property Executed: %s\r", data);
-	strncpy(ret, nop_retval, ret_len);
+	//strncpy(ret, nop_retval, ret_len);
+	snprintf(ret, ret_len, nop_retval);
 	return RETURN_SUCCESS;
 }
+
+/*
+static int hdlr_invalid (const char* data, char* ret) {
+	PRINT( ERROR,"Cannot invoke a set on this property\n");
+	return RETURN_ERROR_SET_PROP;
+}
+*/
 
 static int hdlr_tx_a_rf_dac_dither_en (const char* data, char* ret, size_t ret_len) {
 	int r = 0;
@@ -5130,6 +5139,7 @@ prop_t* get_prop_from_wd(int wd) {
 	}
 
 	// no matching prop found
+	PRINT(VERBOSE, "DEBUG - property not found.\n");
 	return NULL;
 }
 
