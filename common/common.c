@@ -19,11 +19,13 @@
 
 static FILE* fout = NULL;
 static FILE* dout = NULL;
+FILE* configfile;
 
 int PRINT( print_t priority, const char* format, ... ) {
 	int ret = 0;
 	va_list args;
 	va_start(args, format);
+	char lvl;
 
 	// open the file
 	if (!fout) {
@@ -61,6 +63,10 @@ int PRINT( print_t priority, const char* format, ... ) {
 			break;
 	}
 	strcpy(newfmt + strlen(newfmt), format);
+	//get log level from file
+	configfile = fopen(CONFIG_FILE, "r");
+
+	//set different priorities based on the log level
 
 	// DUMP or DEBUG or INFO or ERROR, file
 	if (fout && priority != VERBOSE) {

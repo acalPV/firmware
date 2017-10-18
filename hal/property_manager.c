@@ -282,11 +282,14 @@ void check_property_inotifies(void) {
 	char prop_ret[MAX_PROP_LEN] = "\0";
 	char path[MAX_PATH_LEN] = "\0";
 	int n;
+	struct stat st;
 
 	ioctl(inotify_fd, FIONREAD, &n);
 	PRINT(VERBOSE, "Debug - bytes available for read: %i\n", n);
 	if (n == 0){
-		PRINT(ERROR, "No bytes available to for read on fd\n");
+		PRINT(ERROR, "No bytes available for read on fd\n");
+		//stat(inotify_fd, &st);
+		//PRINT(VERBOSE, "DEBUG - fd mode: %s\n", st.st_mode);
 		return;
 	}
 	//for debug only - remove later

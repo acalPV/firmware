@@ -38,6 +38,17 @@
 
 #define ENET_DEV "eth0"
 
+
+#define MAXBUF 1024
+#define DELIM "= "
+
+struct config
+{
+   char LOGFILE[MAXBUF];
+   char DUMPFILE[MAXBUF];
+   char LOGLVL[MAXBUF];
+};
+
 /*
 // timers for polling
 static struct timeval tstart;
@@ -99,6 +110,78 @@ void server_ready_led(){
     write_hps_reg("led0", 0x1);
 }
 
+struct config get_config(char *filename){
+        struct config configstruct;
+        FILE *file = fopen (filename, "r");
+
+        if (file == NULL){
+        	//create file and write default values
+        	fclose(file);
+        	file = fopen(filename, "a");
+        	fprintf(filename, "log file = /var/crimson/crimson.log\n");
+        	fprintf(filename, "dump file = /var/crimson/dump.log\n");
+        	fprintf(filename, "log level = INFO");
+        	fclose(file);
+        	fflush(file);
+        }
+
+        char line[MAXBUF];
+        int i = 0;
+
+        while(fgets(line, sizeof(line), file) != NULL){
+			char *cfline;
+			cfline = strstr((char *)line,DELIM);
+			cfline = cfline + strlen(DELIM);
+
+			if (i == 0){
+					memcpy(configstruct.LOGFILE,cfline,strlen(cfline));
+
+			} else if (i == 1){
+					memcpy(configstruct.DUMPFILE,cfline,strlen(cfline));
+
+			} else if (i == 2){
+					memcpy(configstruct.LOGLVL,cfline,strlen(cfline));
+
+			}
+			i++;
+		} // End while
+		fclose(file);
+		fflush(file);
+
+        return configstruct;
+}
+
+void set_log_lvl(char* filename, char lvl){
+	FILE* file = fopen(filename, "r+");
+
+	if (file != NULL){
+		char line[MAXBUF];
+		int i = 0;
+		char val;
+		char loglvl;
+
+		loglvl= "log level = ";
+
+		while(fgets(line, sizeof(line), file) != NULL){
+				char *cfline;
+				cfline = strstr((char *)line,loglvl);
+				if (cfline){
+					fseek( file, loglvl + strlen(loglvl), SEEK_SET);
+					snprintf(val, 7, "%s ", lvl);
+					fputs( val, file);
+				}
+				i++;
+		} // End while
+		fclose(file);
+		fflush(file);
+	} // End if file
+	else{
+		printf("ERROR: Could not read log level, no config file exists.");
+		return RETURN_ERROR;
+	}
+	return;
+}
+
 // main loop
 int main(int argc, char *argv[]) {
 
@@ -120,6 +203,21 @@ int main(int argc, char *argv[]) {
 
 			return 0;
 		}
+		char loglvl;
+		if (strcmp(argv[1], "-l")){
+			loglvl = "ERROR  ";
+		}else if (strcmp(argv[1], "-ll")){
+			loglvl = "INFO   ";
+		}else if (strcmp(argv[1], "-lll")){
+			loglvl = "DEBUG  ";
+		}else if (strcmp(argv[1],"-llll")){
+			loglvl = "VERBOSE";
+		}
+		set_log_lvl(CONFIG_FILE, loglvl);
+
+		struct config conf;
+		conf = get_config(CONFIG_FILE);
+
 	}
 
 	int ret = 0;

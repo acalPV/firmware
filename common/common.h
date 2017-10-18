@@ -138,5 +138,6 @@ int PRINT( print_t priority, const char* format, ... );
 
 #define LOG_FILE	( "/var/crimson/crimson.log" )
 #define DUMP_FILE	( "/var/crimson/dump.log" )
+#define CONFIG_FILE ( "/var/crimson/config.conf")
 
 #endif /* COMMON_H_ */
