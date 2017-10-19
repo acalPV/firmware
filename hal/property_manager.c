@@ -287,14 +287,12 @@ void check_property_inotifies(void) {
 	ioctl(inotify_fd, FIONREAD, &n);
 	PRINT(VERBOSE, "Debug - bytes available for read: %i\n", n);
 	if (n == 0){
-		PRINT(ERROR, "No bytes available for read on fd\n");
+		PRINT(INFO, "No bytes available for read on inotify_fd\n");
 		//stat(inotify_fd, &st);
 		//PRINT(VERBOSE, "DEBUG - fd mode: %s\n", st.st_mode);
 		return;
 	}
-	//for debug only - remove later
 	ssize_t len = read(inotify_fd, buf, EVENT_BUF_LEN);
-	PRINT(VERBOSE, "DEBUG - inotify_fd_len = %u\n", len);
 
 	ssize_t i = 0;
 	while (i < len) {
@@ -342,8 +340,6 @@ void check_property_inotifies(void) {
 				PRINT( INFO,"Re-added to inotify, wd: %i\n", prop -> wd);
 			}
 		}
-		//for debug only - remove later
-		PRINT(VERBOSE, "DEBUG - exiting check_properties_inotifies()\n");
 		i += sizeof(struct inotify_event) + event -> len;
 	}
 }

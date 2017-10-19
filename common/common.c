@@ -21,18 +21,64 @@ static FILE* fout = NULL;
 static FILE* dout = NULL;
 FILE* configfile;
 
+
+struct config get_config(char *filename){
+        struct config configstruct;
+        FILE *file = fopen (filename, "r");
+        /*
+        if (file == NULL){
+        	//create file and write default values
+        	printf("DEBUG - no config file. creating config file.\n");
+        	fclose(file);
+        	file = fopen(filename, "a");
+        	fprintf(filename, "log file = /var/crimson/crimson.log\n");
+        	fprintf(filename, "dump file = /var/crimson/dump.log\n");
+        	fprintf(filename, "log level = INFO\n");
+        	fclose(file);
+        	fflush(file);
+        	printf("DEBUG - cofig file created.\n");
+        }*/
+
+        char line[MAXBUF];
+        int i = 0;
+
+        while(fgets(line, sizeof(line), file) != NULL){
+			char *cfline;
+			cfline = strstr((char *)line,DELIM);
+			cfline = cfline + strlen(DELIM);
+
+			if (i == 0){
+					memcpy(configstruct.LOGFILE,cfline,strlen(cfline));
+
+			} else if (i == 1){
+					memcpy(configstruct.DUMPFILE,cfline,strlen(cfline));
+
+			} else if (i == 2){
+					memcpy(configstruct.LOGLVL,cfline,strlen(cfline));
+
+			}
+			i++;
+		} // End while
+		fclose(file);
+		fflush(file);
+		printf("new log lvl: %s\n", configstruct.LOGLVL);
+		return configstruct;
+}
+
 int PRINT( print_t priority, const char* format, ... ) {
 	int ret = 0;
 	va_list args;
 	va_start(args, format);
-	char lvl;
+	//char lvl;
+
+	//struct config conf;
+	//conf = get_config(CONFIG_FILE);
 
 	// open the file
-	if (!fout) {
+	if (!fout){
 		fout = fopen(LOG_FILE, "a");
 	}
-
-	if (!dout) {
+	if (!dout){
 		dout = fopen(DUMP_FILE, "a");
 	}
 
@@ -63,18 +109,28 @@ int PRINT( print_t priority, const char* format, ... ) {
 			break;
 	}
 	strcpy(newfmt + strlen(newfmt), format);
-	//get log level from file
-	configfile = fopen(CONFIG_FILE, "r");
-
+	/*
 	//set different priorities based on the log level
+	lvl = conf.LOGLVL;
 
-	// DUMP or DEBUG or INFO or ERROR, file
-	if (fout && priority != VERBOSE) {
-		ret = vfprintf(fout, newfmt, args );
+	//log ERROR
+	if (fout && strcmp(lvl, "ERROR") && priority == ERROR){
+		ret = vfprintf(fout, newfmt, args ); // write to file
+		ret = vprintf(newfmt, args); //write to stdout
 	}
-
-	// INFO, stdout
-	if (priority == INFO) {
+	//log INFO
+	if (fout && strcmp(lvl, "INFO") && (priority == INFO || priority == ERROR)){
+		ret = vfprintf(fout, newfmt, args );
+		ret = vprintf(newfmt, args);
+	}
+	//log DEBUG
+	if (fout && strcmp(lvl, "DEBUG") && (priority == INFO || priority == ERROR || priority == DEBUG)){
+		ret = vfprintf(fout, newfmt, args );
+		ret = vprintf(newfmt, args);
+	}
+	//log VERBOSE
+	if (fout && strcmp(lvl, "VERBOSE") && (priority == INFO || priority == ERROR || priority == DEBUG || priority == VERBOSE)){
+		ret = vfprintf(fout, newfmt, args );
 		ret = vprintf(newfmt, args);
 	}
 
@@ -87,14 +143,37 @@ int PRINT( print_t priority, const char* format, ... ) {
 	if (priority == DUMP) {
 		ret = vfprintf(dout, newfmt, args);
 	}
+	*/
+	//priority sorting from old code
+	//DUMP or DEBUG or INFO or ERROR, file
+	if (fout && priority != VERBOSE){
+		ret = vfprintf(fout, newfmt, args);
+	}
 
-	if (priority == VERBOSE) {
-		// do nothing as of now
+	//INFO, stdout
+	if (priority == INFO){
 		ret = vprintf(newfmt, args);
 	}
 
+	// ERROR, stderr
+	if (priority == ERROR ) {
+		ret = vfprintf(stderr, newfmt, args );
+	}
+
+	//VERBOSE, stdout
+	if (priority == VERBOSE){
+		//ret = vprintf(newfmt, args);
+	}
+
+	// DUMP, file
+	if (priority == DUMP) {
+		ret = vfprintf(dout, newfmt, args);
+	}
+
 	// flush the file
+	//fclose(fout);
 	fflush(fout);
+	//fclose(dout);
 	fflush(dout);
 
 	va_end(args);

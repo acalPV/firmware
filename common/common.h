@@ -133,8 +133,23 @@ typedef enum {
 	DUMP
 } print_t;
 
+//used to set log level
+
+#define MAXBUF 1024
+#define DELIM "= "
+
+struct config
+{
+   char LOGFILE[MAXBUF];
+   char DUMPFILE[MAXBUF];
+   char LOGLVL[MAXBUF];
+};
+
+struct config get_config(char *filename);
+
 // printf wrapper
 int PRINT( print_t priority, const char* format, ... );
+
 
 #define LOG_FILE	( "/var/crimson/crimson.log" )
 #define DUMP_FILE	( "/var/crimson/dump.log" )

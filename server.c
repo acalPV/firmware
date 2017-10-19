@@ -38,17 +38,6 @@
 
 #define ENET_DEV "eth0"
 
-
-#define MAXBUF 1024
-#define DELIM "= "
-
-struct config
-{
-   char LOGFILE[MAXBUF];
-   char DUMPFILE[MAXBUF];
-   char LOGLVL[MAXBUF];
-};
-
 /*
 // timers for polling
 static struct timeval tstart;
@@ -110,75 +99,46 @@ void server_ready_led(){
     write_hps_reg("led0", 0x1);
 }
 
-struct config get_config(char *filename){
-        struct config configstruct;
-        FILE *file = fopen (filename, "r");
+void set_log_lvl(char* filename, char lvl){
+	FILE* file = fopen(filename, "a+");
+	/*
+	if (file == NULL){
+		//create file and write default values
+		printf("DEBUG - no config file. creating config file.\n");
+		fclose(file);
+		file = fopen(filename, "a");
+		fprintf(filename, "log file = /var/crimson/crimson.log\n");
+		fprintf(filename, "dump file = /var/crimson/dump.log\n");
+		fprintf(filename, "log level = INFO\n");
+		fclose(file);
+		fflush(file);
+		printf("DEBUG - cofig file created.\n");
+	}*/
 
-        if (file == NULL){
-        	//create file and write default values
-        	fclose(file);
-        	file = fopen(filename, "a");
-        	fprintf(filename, "log file = /var/crimson/crimson.log\n");
-        	fprintf(filename, "dump file = /var/crimson/dump.log\n");
-        	fprintf(filename, "log level = INFO");
-        	fclose(file);
-        	fflush(file);
-        }
+	char line[MAXBUF];
+	int i = 0;
+	char val;
+	char loglvl;
 
-        char line[MAXBUF];
-        int i = 0;
+	loglvl= "log level = ";
 
-        while(fgets(line, sizeof(line), file) != NULL){
+	while(fgets(line, sizeof(line), file) != NULL){
 			char *cfline;
-			cfline = strstr((char *)line,DELIM);
-			cfline = cfline + strlen(DELIM);
+			cfline = strstr((char *)line,loglvl);
+			if (cfline){
+				//snprintf(val, 7, "%s ", lvl);
+				//fputs( val, file);
 
-			if (i == 0){
-					memcpy(configstruct.LOGFILE,cfline,strlen(cfline));
-
-			} else if (i == 1){
-					memcpy(configstruct.DUMPFILE,cfline,strlen(cfline));
-
-			} else if (i == 2){
-					memcpy(configstruct.LOGLVL,cfline,strlen(cfline));
-
+				strncpy(cfline+strlen(cfline),lvl, sizeof(line));
+				//fseek( file, cfline, SEEK_SET);
+				//fprintf( file, cfline);
+				//printf(cfline);
 			}
 			i++;
-		} // End while
-		fclose(file);
-		fflush(file);
+	} // End while
 
-        return configstruct;
-}
-
-void set_log_lvl(char* filename, char lvl){
-	FILE* file = fopen(filename, "r+");
-
-	if (file != NULL){
-		char line[MAXBUF];
-		int i = 0;
-		char val;
-		char loglvl;
-
-		loglvl= "log level = ";
-
-		while(fgets(line, sizeof(line), file) != NULL){
-				char *cfline;
-				cfline = strstr((char *)line,loglvl);
-				if (cfline){
-					fseek( file, loglvl + strlen(loglvl), SEEK_SET);
-					snprintf(val, 7, "%s ", lvl);
-					fputs( val, file);
-				}
-				i++;
-		} // End while
-		fclose(file);
-		fflush(file);
-	} // End if file
-	else{
-		printf("ERROR: Could not read log level, no config file exists.");
-		return RETURN_ERROR;
-	}
+	fclose(file);
+	fflush(file);
 	return;
 }
 
@@ -186,6 +146,7 @@ void set_log_lvl(char* filename, char lvl){
 int main(int argc, char *argv[]) {
 
 	fd_set rfds;
+	char loglvl = 'not set';
 
 	// check for firmware version
 	if (argc >= 2) {
@@ -203,27 +164,32 @@ int main(int argc, char *argv[]) {
 
 			return 0;
 		}
-		char loglvl;
-		if (strcmp(argv[1], "-l")){
-			loglvl = "ERROR  ";
-		}else if (strcmp(argv[1], "-ll")){
-			loglvl = "INFO   ";
-		}else if (strcmp(argv[1], "-lll")){
-			loglvl = "DEBUG  ";
-		}else if (strcmp(argv[1],"-llll")){
-			loglvl = "VERBOSE";
-		}
-		set_log_lvl(CONFIG_FILE, loglvl);
 
-		struct config conf;
-		conf = get_config(CONFIG_FILE);
+		if (strcmp(argv[1], "-l") == 0){
+			loglvl = "ERROR  ";
+			set_log_lvl(CONFIG_FILE, loglvl);
+			//struct config conf;
+			//conf = get_config(CONFIG_FILE);
+			return 0;
+		}/*else if (strcmp(argv[1], "-ll") == 0){
+			loglvl = "INFO   ";
+			set_log_lvl(CONFIG_FILE, loglvl);
+			return 0;
+		}else if (strcmp(argv[1], "-lll") == 0){
+			loglvl = "DEBUG  ";
+			set_log_lvl(CONFIG_FILE, loglvl);
+			return 0;
+		}else if (strcmp(argv[1],"-llll") == 0){
+			loglvl = "VERBOSE";
+			set_log_lvl(CONFIG_FILE, loglvl);
+			return 0;
+		}*/
 
 	}
 
 	int ret = 0;
 	int i = 0;
 	cmd_t cmd;
-
 	PRINT( INFO, "Starting Crimson server\n");
 	
 	server_init_led();
